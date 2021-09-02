@@ -23,8 +23,8 @@ typedef struct {
     int screen;
     int s1_adv;
     char s1_fpath[4096];
+    bfbb_save_file save_file;
     hh* hiphop;
-    bfbb_save_file* save_file;
 } hit_main;
 
 /*-------------------------------------------
@@ -140,7 +140,7 @@ void hit_s1_data(hit_main *cv)
     float win_height_offset = window_height/20;
     float win_height = window_height - (window_height/20*2);
     
-    bfbb_save_file *save_file = cv->save_file;
+    bfbb_save_file *save_file = &cv->save_file;
     bfbb_save_file_block *blocks = save_file->blocks;
     int block_count = save_file->block_count;
     
@@ -160,7 +160,7 @@ void hit_s1_data(hit_main *cv)
     if(nk_begin(cv->nk_ctx, "Data Panel", nk_rect(0, win_height_offset, window_width, win_height), NK_WINDOW_BORDER))
     {
         char buffer[1024];
-
+        
         for(int i = 0; i < block_count; i++)
         {
             sprintf(buffer, "Bytes used: %d", blocks[i].header.bytes_used);
@@ -229,10 +229,10 @@ void hit_s1_data(hit_main *cv)
                             int len = 2;
                             if(!(b%8))
                                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 8);
-                                        
+                            
                             // TODO(jelly): find out what nk_plugin_filter does
                             nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, &bytes_in_hex[i][b*3], 3, (nk_plugin_filter)NK_FILTER_INT);
-                                        
+                            
                             //cv->save_file->blocks[i].raw_bytes[b] = hex_string_to_byte(&bytes_in_hex + counter); // ?????
                         }
                         break;
@@ -255,19 +255,19 @@ void hit_s1_bottom_panel(hit_main *cv)
         if(nk_button_label(cv->nk_ctx, "Save File"))
         {
             //TODO: Save the file
-            for(int i = 0; i<cv->save_file->block_count; i++)
+            for(int i = 0; i<cv->save_file.block_count; i++)
             {
-                if(cv->s1_adv && cv->save_file->blocks[i].header.id == FOURCC_LEDR)
+                if(cv->s1_adv && cv->save_file.blocks[i].header.id == FOURCC_LEDR)
                     continue;
-                for(int y = 0; y<cv->save_file->blocks[i].header.bytes_used; y++)
+                for(int y = 0; y<cv->save_file.blocks[i].header.bytes_used; y++)
                 {
-                    cv->save_file->blocks[i].raw_bytes[y] = hex_string_to_byte(&bytes_in_hex[i][y*3]);
+                    cv->save_file.blocks[i].raw_bytes[y] = hex_string_to_byte(&bytes_in_hex[i][y*3]);
                 }
             }
             
-     
-            bfbb_save_file_write_out(cv->save_file, "GameDataOut.xsv", 0);
-
+            
+            bfbb_save_file_write_out(&cv->save_file, "GameDataOut.xsv", 0);
+            
         }
         if(nk_button_label(cv->nk_ctx, cv->s1_adv?"Hex":"Simple"))
         {
@@ -332,8 +332,10 @@ void hit_common_init(hit_main *cv)
             bfbb_save_file save_file;
             static unsigned char static_buffer[100000];
             int size = fread(static_buffer, 1, 100000, in);
-            if (bfbb_save_file_read(&save_file, static_buffer, size, 0))
-                cv->save_file = &save_file;
+            if (!bfbb_save_file_read(&cv->save_file, static_buffer, size, 0)) {
+                // TODO(jelly): the file couldn't be parsed properly: TELL THE USER OR SOMETHING !!!
+            }
+            
         }
         memcpy(cv->s1_fpath, buffer, 4096);
     }

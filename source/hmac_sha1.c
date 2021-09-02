@@ -33,9 +33,7 @@ sha1_hash160 sha1(unsigned char *data, int len) {
 
 sha1_hash160 hmac_sha1(unsigned char *key, int key_len, 
                        unsigned char *data, int len) {
-    int i;
     int block_size = 64;
-    unsigned char block_key[64] = {0};
     unsigned char i_key_pad[64] = {
         0x36,0x36,0x36,0x36,0x36,0x36,0x36,0x36,
         0x36,0x36,0x36,0x36,0x36,0x36,0x36,0x36,
@@ -57,12 +55,7 @@ sha1_hash160 hmac_sha1(unsigned char *key, int key_len,
         0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,
     };
     SHA1_CTX context;
-    
-    if (key_len < block_size) {
-        memcpy(block_key, key, key_len);
-    } else {
-        assert(0);
-    }
+    int i;
     
     for (i = 0; i < key_len; i++) {
         temp[i] ^= key[i];

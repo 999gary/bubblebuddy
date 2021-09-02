@@ -66,8 +66,11 @@ static void win32_d3d9_present(void) {
 
 static LRESULT CALLBACK
 WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+    hit_main *cv = (hit_main *)GetWindowLongPtr(wnd, GWLP_USERDATA);
+    
     switch (msg) {
         case WM_PAINT: {
+            hit_update_and_render(cv);
             win32_d3d9_present();
         } break;
         case WM_SIZE: {
@@ -86,6 +89,8 @@ WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                     nk_d3d9_resize(width, height);
                 }
                 
+                window_width = width;
+                window_height = height;
             }
         } break;
         case WM_DESTROY: {
@@ -178,8 +183,8 @@ int hit_file_select(char* buffer, int bufferlen)
 }
 
 int hit_init(hit_main *cv) {
-    window_height = WINDOW_HEIGHT;
-    window_width = WINDOW_WIDTH;
+    window_height = WINDOW_HEIGHT_INIT;
+    window_width = WINDOW_WIDTH_INIT;
     WNDCLASSW wc;
     RECT rect = { 0, 0, window_width, window_height };
     DWORD style = WS_OVERLAPPEDWINDOW;
