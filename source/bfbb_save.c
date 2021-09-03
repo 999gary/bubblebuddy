@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -460,11 +459,11 @@ int bfbb_save_file_looks_like_gci_file(unsigned char *data, int len) {
 
 int bfbb_save_file_looks_like_xsv_file(unsigned char *data, int len) {
     // TODO(jelly): pick a better number idiot
-    if (len > 64) {
+    if (len > 69) {
         return (data[0] == 'T' &&
-                data[0] == 'D' &&
-                data[0] == 'A' &&
-                data[0] == 'G');
+                data[1] == 'A' &&
+                data[2] == 'D' &&
+                data[3] == 'G');
     }
     return 0;
 }
@@ -473,7 +472,7 @@ int bfbb_save_file_read(bfbb_save_file *result, unsigned char *data, int len) {
     int file_type = -1;
     if (bfbb_save_file_looks_like_xsv_file(data, len)) file_type = 0;
     if (bfbb_save_file_looks_like_gci_file(data, len)) file_type = 1;
-    if (file_type > 0) return bfbb_save_file_read_(result, data, len, file_type);
+    if (file_type >= 0) return bfbb_save_file_read_(result, data, len, file_type);
     return 0;
 }
 

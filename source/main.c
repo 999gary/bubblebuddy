@@ -141,6 +141,8 @@ char* thumbnail_label_from_id(int32_t id)
 
 void hit_s1_data(hit_main *cv)
 {
+    if(!cv->save_file_is_loaded)
+        return;
     float win_height_offset = window_height/20;
     float win_height = window_height - (window_height/20*2);
     
@@ -183,7 +185,7 @@ void hit_s1_data(hit_main *cv)
                 switch(blocks[i].header.id)
                 {
                     case(FOURCC_LEDR):
-                    {
+                    { 
                         if(cv->s1_adv)
                         {
                             nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
@@ -270,7 +272,7 @@ void hit_s1_bottom_panel(hit_main *cv)
             }
             
             
-            bfbb_save_file_write_out(&cv->save_file, "GameDataOut.xsv", 0);
+            bfbb_save_file_write_out(&cv->save_file, "GameDataOut.gci", 1);
             
         }
         if(nk_button_label(cv->nk_ctx, cv->s1_adv?"Hex":"Simple"))
@@ -336,12 +338,10 @@ void hit_common_init(hit_main *cv)
             bfbb_save_file save_file;
             static unsigned char static_buffer[100000];
             int size = fread(static_buffer, 1, 100000, in);
-            // TODO(jelly): either ask the user or automatically 
-            //              detect if a file is gamecube or xbox
             if (!bfbb_save_file_read(&cv->save_file, static_buffer, size)) {
                 // TODO(jelly): the file couldn't be parsed properly: TELL THE USER OR SOMETHING !!!
             }
-            
+            cv->save_file_is_loaded = 1;
         }
         memcpy(cv->s1_fpath, buffer, 4096);
     }
