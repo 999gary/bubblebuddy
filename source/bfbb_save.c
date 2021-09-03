@@ -369,27 +369,27 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
 }
 
 void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
+    int size_of_data = 0xc9c8;
+    uint32 sfil_size = size_of_data - b->size - 8;
+    uint32 sfil_bytes_used = 8;
+    
     if (is_gci) {
-        unsigned char sfil_header[] = {
-            0x53, 0x46, 0x49, 0x4C, 0x00, 0x00, 0x75,
-            0x38, 0x00, 0x00, 0x00, 0x08, 0x52, 0x79, 
-            0x61, 0x6E, 0x4E, 0x65, 0x69, 0x6C
+        unsigned char sfil_id[] = {
+            0x53, 0x46, 0x49, 0x4C
         };
-        write_bytes(b, sfil_header, sizeof(sfil_header));
-        bfbb_save_file_append_padding(b, 30000);
+        byteswap32(&sfil_size);
+        byteswap32(&sfil_bytes_used);
+        write_bytes(b, sfil_id, sizeof(sfil_id));
     } else {
         unsigned char sfil_id[] = {
             0x4C, 0x49, 0x46, 0x53
         };
         write_bytes(b, sfil_id, sizeof(sfil_id));
-        uint32 sfil_size = 51676-b->size-20-8;
-        write_bytes(b, (unsigned char *)&sfil_size, sizeof(sfil_size));
-        uint32 sfil_bytes_used = 8;
-        write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
-        write_bytes(b, (unsigned char *)"RyanNeil", 8);
-        
-        bfbb_save_file_append_padding(b, sfil_size - 8);
     }
+    write_bytes(b, (unsigned char *)&sfil_size, sizeof(sfil_size));
+    write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
+    write_bytes(b, (unsigned char *)"RyanNeil", 8);
+    bfbb_save_file_append_padding(b, sfil_size - 8);
 }
 
 int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is_gci) {
@@ -427,12 +427,11 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
     bfbb_save_file_set_gdat_block(gdat, file_size, checksum, is_gci);
     
     if (is_gci) {
-        write_byte_n_times(&b, 0, 0x13f8);
+        write_byte_n_times(&b, 0, 0x14040 - b.size);
     } else {
         sha1_hash160 xbox_sig = bfbb_hmac_sha1(b.bytes, b.size);
         write_bytes(&b, xbox_sig.hash, 20);
     }
-    
     
     {
         FILE *out = fopen(path, "wb");
