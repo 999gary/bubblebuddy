@@ -1,5 +1,6 @@
-
+#include "types.h"
 #include "config.h"
+#include "bit_methods.h"
 
 #ifdef _WIN32
 #include "win32_d3d9_include.h"
@@ -227,6 +228,25 @@ void hit_s1_data(hit_main *cv)
                             break;
                         }
                     }
+                    case(FOURCC_PLYR):
+                    {
+                        if(cv->s1_adv)
+                        {
+                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                            nk_property_int(cv->nk_ctx, "Max Health", 0, &blocks[i].plyr.max_health, 6, 1, 1);
+                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                            nk_property_int(cv->nk_ctx, "Character", 0, &blocks[i].plyr.character, 2, 1, 5);
+                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                            nk_property_int(cv->nk_ctx, "Shinies", 0, &blocks[i].plyr.shinies, 99999, 100, 1);
+                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                            nk_property_int(cv->nk_ctx, "Spats", 0, &blocks[i].plyr.spats, 100, 1, 1);
+                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                            nk_checkbox_label(cv->nk_ctx, "BB Unlocked", &blocks[i].plyr.has_bubble_bowl);
+                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                            nk_checkbox_label(cv->nk_ctx, "CB Unlocked", &blocks[i].plyr.has_cruise_bubble);
+                            break;
+                        }
+                    }
                     default:
                     {
                         for(int b = 0; b < blocks[i].header.bytes_used; b++)
@@ -272,7 +292,7 @@ void hit_s1_bottom_panel(hit_main *cv)
             }
             
             
-            bfbb_save_file_write_out(&cv->save_file, "GameDataOut.gci", 1);
+            bfbb_save_file_write_out(&cv->save_file, "GameDataOut.xsv", 0);
             
         }
         if(nk_button_label(cv->nk_ctx, cv->s1_adv?"Hex":"Simple"))

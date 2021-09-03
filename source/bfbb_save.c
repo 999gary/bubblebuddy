@@ -103,6 +103,22 @@ typedef struct {
 } bfbb_save_file_block_svid;
 
 typedef struct {
+    int32 socks;
+    int32 pickups;
+} bfbb_save_file_level_collectables;
+
+typedef struct {
+    int32 max_health;
+    int32 character;
+    int32 shinies;
+    int32 spats;
+    int32 has_bubble_bowl;
+    int32 has_cruise_bubble;
+    bfbb_save_file_level_collectables level_collectables[LEVEL_COUNT];
+    int32 total_socks;
+} bfbb_save_file_block_plyr;
+
+typedef struct {
     union {
         uint32 id;
         char id_chars[4];
@@ -121,6 +137,7 @@ typedef struct {
         bfbb_save_file_block_room room;
         bfbb_save_file_block_pref pref;
         bfbb_save_file_block_svid svid;
+        bfbb_save_file_block_plyr plyr;
     };
 } bfbb_save_file_block;
 #pragma pack(pop)
@@ -150,6 +167,7 @@ typedef struct {
 #define FOURCC_GDAT FOURCC_CONST('G', 'D', 'A', 'T')
 #define FOURCC_LEDR FOURCC_CONST('L', 'E', 'D', 'R')
 #define FOURCC_ROOM FOURCC_CONST('R', 'O', 'O', 'M')
+#define FOURCC_PLYR FOURCC_CONST('P', 'L', 'Y', 'R')
 #define FOURCC_PREF FOURCC_CONST('P', 'R', 'E', 'F')
 #define FOURCC_SVID FOURCC_CONST('S', 'V', 'I', 'D')
 #define FOURCC_SFIL FOURCC_CONST('S', 'F', 'I', 'L')
@@ -250,6 +268,40 @@ int bfbb_save_file_block_read(buffer *b, bfbb_save_file_block *new_block, int is
     return -1;
 }
 
+int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
+{
+    for(int i = 0; i<save_file->block_count; i++)
+    {
+        bfbb_save_file_block* block = &save_file->blocks[i];
+        switch(block->header.id)
+        {
+            case(FOURCC_PLYR):
+            {
+                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
+                bit_reader br = {b};
+                bfbb_save_file_block_plyr p = {0};
+                bit_eat(&br, 1);
+                p.max_health = bit_eat_s32(&br);
+                p.character = bit_eat_s32(&br);
+                p.shinies = bit_eat_s32(&br);
+                p.spats = bit_eat_s32(&br);
+                p.has_bubble_bowl = bit_eat_s32(&br);
+                p.has_cruise_bubble = bit_eat_s32(&br);
+                
+                for(int i = 0; i<LEVEL_COUNT; i++)
+                {
+                    p.level_collectables[i].socks = bit_eat_s32(&br);
+                    p.level_collectables[i].pickups = bit_eat_s32(&br);
+                }
+
+                p.total_socks = bit_eat_s32(&br);
+                block->plyr = p;
+                break;
+            }
+        }
+    }
+}
+
 int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size, int is_gci) {
     buffer b = {size, bytes};
     char *magic_string = 0;
@@ -283,8 +335,10 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
             return 0;
         }
     }
-    
-    result->block_count = i -1;
+
+    result->block_count = i-1;
+
+    bfbb_save_file_read_bit_blocks(result);
     
     return 1;
 }
@@ -387,6 +441,8 @@ void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
         write_bytes(b, sfil_id, sizeof(sfil_id));
     }
     write_bytes(b, (unsigned char *)&sfil_size, sizeof(sfil_size));
+    if(is_gci)
+        byteswap32(&sfil_size);
     write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
     write_bytes(b, (unsigned char *)"RyanNeil", 8);
     bfbb_save_file_append_padding(b, sfil_size - 8);

@@ -7,3 +7,4 @@
 //Why is the 4kb?
 #define PATH_BUFFER_SIZE 4096
 #define HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE
+#define LEVEL_COUNT 15
