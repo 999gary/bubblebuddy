@@ -251,7 +251,7 @@ int bfbb_save_file_block_read(buffer *b, bfbb_save_file_block *new_block, int is
     return -1;
 }
 
-int bfbb_save_file_read(bfbb_save_file *result, unsigned char *bytes, int size, int is_gci) {
+int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size, int is_gci) {
     buffer b = {size, bytes};
     char *magic_string = 0;
     bfbb_save_file_block gdat;
@@ -388,7 +388,7 @@ void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
         uint32 sfil_bytes_used = 8;
         write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
         write_bytes(b, (unsigned char *)"RyanNeil", 8);
-
+        
         bfbb_save_file_append_padding(b, sfil_size - 8);
     }
 }
@@ -444,6 +444,37 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
     }
     
     return bytes_written_out == b.size;
+}
+
+// NOTE(jelly): maybe there can be more checks but who cares really
+int bfbb_save_file_looks_like_gci_file(unsigned char *data, int len) {
+    if (len > 0x6040 + 16) {
+        int offset = 0x6040;
+        return (data[offset+0] == 'G' &&
+                data[offset+1] == 'D' &&
+                data[offset+2] == 'A' &&
+                data[offset+3] == 'T');
+    }
+    return 0;
+}
+
+int bfbb_save_file_looks_like_xsv_file(unsigned char *data, int len) {
+    // TODO(jelly): pick a better number idiot
+    if (len > 64) {
+        return (data[0] == 'T' &&
+                data[0] == 'D' &&
+                data[0] == 'A' &&
+                data[0] == 'G');
+    }
+    return 0;
+}
+
+int bfbb_save_file_read(bfbb_save_file *result, unsigned char *data, int len) {
+    int file_type = -1;
+    if (bfbb_save_file_looks_like_xsv_file(data, len)) file_type = 0;
+    if (bfbb_save_file_looks_like_gci_file(data, len)) file_type = 1;
+    if (file_type > 0) return bfbb_save_file_read_(result, data, len, file_type);
+    return 0;
 }
 
 // NOTE(jelly): API idea

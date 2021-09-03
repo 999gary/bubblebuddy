@@ -55,8 +55,8 @@ sha1_hash160 hmac_sha1(unsigned char *key, int key_len,
         0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,
     };
     SHA1_CTX context;
-    int i;
     
+    int i;
     for (i = 0; i < key_len; i++) {
         temp[i] ^= key[i];
         i_key_pad[i] ^= key[i];

@@ -25,6 +25,7 @@ typedef struct {
     char s1_fpath[4096];
     bfbb_save_file save_file;
     hh* hiphop;
+    int save_file_is_loaded;
 } hit_main;
 
 /*-------------------------------------------
@@ -36,7 +37,7 @@ Global Components
 void hit_top_panel(hit_main *cv)
 {
     float win_height = window_height/20;
-    if(nk_begin(cv->nk_ctx, "Tab Panel", nk_rect(0, 0, window_width, win_height), NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR ))
+    if(nk_begin(cv->nk_ctx, "Tpab Panel", nk_rect(0, 0, window_width, win_height), NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR ))
     {
         nk_layout_row_dynamic(cv->nk_ctx, win_height*.7, 6);
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE
@@ -90,6 +91,7 @@ char nibble_to_hex_char(unsigned char nibble) {
 unsigned char hex_char_to_nibble(char hex_char) {
     if (hex_char >= '0' && hex_char <= '9') return hex_char - '0';
     else if (hex_char >= 'A' && hex_char <= 'F') return hex_char - 'A' + 10;
+    else if (hex_char >= 'a' && hex_char <= 'f') return hex_char - 'a' + 10;
     return 0;
 }
 
@@ -132,6 +134,8 @@ char* thumbnail_label_from_id(int32_t id)
         "Chum Bucket Lab",
         "Bikini Bottom"
     };
+    if (id < 0) id = 0;
+    if (id > 13) id = 13;
     return lookup[id];
 }
 
@@ -176,7 +180,6 @@ void hit_s1_data(hit_main *cv)
             {
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                 nk_label(cv->nk_ctx, buffer, NK_TEXT_ALIGN_CENTERED);
-                //why???
                 switch(blocks[i].header.id)
                 {
                     case(FOURCC_LEDR):
@@ -230,8 +233,9 @@ void hit_s1_data(hit_main *cv)
                             if(!(b%8))
                                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 8);
                             
-                            // TODO(jelly): find out what nk_plugin_filter does
-                            nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, &bytes_in_hex[i][b*3], 3, (nk_plugin_filter)NK_FILTER_INT);
+                            // TODO(jelly): nk_plugin_filter restricts what the user can type - we only want hex, 
+                            //              but that doesn't seem to be offered by nuklear? only float and int?
+                            nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, &bytes_in_hex[i][b*3], 3, (nk_plugin_filter)0);
                             
                             //cv->save_file->blocks[i].raw_bytes[b] = hex_string_to_byte(&bytes_in_hex + counter); // ?????
                         }
@@ -332,7 +336,9 @@ void hit_common_init(hit_main *cv)
             bfbb_save_file save_file;
             static unsigned char static_buffer[100000];
             int size = fread(static_buffer, 1, 100000, in);
-            if (!bfbb_save_file_read(&cv->save_file, static_buffer, size, 0)) {
+            // TODO(jelly): either ask the user or automatically 
+            //              detect if a file is gamecube or xbox
+            if (!bfbb_save_file_read(&cv->save_file, static_buffer, size)) {
                 // TODO(jelly): the file couldn't be parsed properly: TELL THE USER OR SOMETHING !!!
             }
             
