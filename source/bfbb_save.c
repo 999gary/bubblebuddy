@@ -293,7 +293,7 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                     p.level_collectables[i].socks = bit_eat_s32(&br);
                     p.level_collectables[i].pickups = bit_eat_s32(&br);
                 }
-
+                
                 p.total_socks = bit_eat_s32(&br);
                 block->plyr = p;
                 break;
@@ -335,9 +335,9 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
             return 0;
         }
     }
-
+    
     result->block_count = i-1;
-
+    
     bfbb_save_file_read_bit_blocks(result);
     
     return 1;
@@ -417,7 +417,19 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     }
     result = (bfbb_save_file_block *)(b->bytes + b ->size);
     write_bytes(b, (unsigned char *)&block->header, sizeof(block->header));
-    write_bytes(b, block->raw_bytes, size_to_write);
+    
+    {
+        bit_writer bw = {b->max_size - b->size, b->data + b->size};
+        switch (block->header.id) {
+            case FOURCC_PLYR: {
+                bit_push(&bw, 1, 1);
+                // more stuff
+                
+            } break;
+            default: write_bytes(b, block->raw_bytes, size_to_write);
+        }
+    }
+    
     bfbb_save_file_append_padding(b, padding_size);
     return result;
 }
@@ -455,6 +467,8 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
     uint32 checksum;
     bfbb_save_file_block dummy_gdat, *gdat;
     int bytes_written_out = 0;
+    
+    memset(static_buffer, 0, sizeof(static_buffer)); // NOTE(jelly): in case we write out multiple files, i want this buffer clear.
     
     if (is_gci) {
         const int GCI_EPOCH = 946702799;
