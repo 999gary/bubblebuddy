@@ -165,21 +165,34 @@ static void create_d3d9_device(HWND wnd)
     }
 }
 
-int hit_file_select(char* buffer, int bufferlen)
+// NOTE(jelly): the two functions below return zero on success because C# is really cool
+int hit_file_select_read(char* path, int max_path_len)
 {
     OPENFILENAMEA file = {0};
-    file.lpstrFile = buffer;
-    file.nMaxFile = bufferlen;
+    file.lpstrFile = path;
+    file.nMaxFile = max_path_len;
     file.lStructSize = sizeof file;
     file.lpstrFilter = "All Files\0*.*\0\0";
-    if(GetOpenFileNameA(&file))
-    {
+    return !GetOpenFileNameA(&file);
+}
+
+int hit_file_select_write(char* path, int max_path_len, int *save_as_gci, int *extension_supplied)
+{
+    OPENFILENAMEA file = {0};
+    file.lpstrFile = path;
+    file.nMaxFile = max_path_len;
+    file.lStructSize = sizeof file;
+    file.lpstrFilter = "Xbox Save File\0.xsv\0Gamecube Save File\0.gci\0\0";
+    if (GetSaveFileNameA(&file)) {
+        *save_as_gci = (file.nFilterIndex - 1) != 0; // NOTE(jelly): clamping to 1 or 0
+        *extension_supplied = file.nFileExtension != 0;
         return 0;
     }
-    else
-    {
-        return 1;
-    }
+    return 1;
+}
+
+void hit_message_box_ok(char *caption, char *message) {
+    MessageBoxA(0, message, caption, MB_OK);
 }
 
 int hit_init(hit_main *cv) {

@@ -29,6 +29,15 @@ typedef struct {
     int save_file_is_loaded;
 } hit_main;
 
+void hit_common_init(hit_main *cv);
+void hit_update_and_render(hit_main *cv);
+
+#ifdef _WIN32
+#include "win32_d3d9_renderer.c"
+#elif __linux__
+#include "sdlrender.c"
+#endif
+
 /*-------------------------------------------
 
 Global Components
@@ -102,8 +111,8 @@ void add_byte_to_hex_string(unsigned char byte, int block_index, int* counter) {
     *counter+=3;
 }
 
-unsigned char hex_string_to_byte(char *string) {
-    return (hex_char_to_nibble(string[0]) << 4) | (hex_char_to_nibble(string[1]));
+unsigned char hex_string_to_byte(char *s) {
+    return (hex_char_to_nibble(s[0]) << 4) | (hex_char_to_nibble(s[1]));
 }
 
 void nk_menu_begin_labelf(struct nk_context *ctx, nk_flags align, struct nk_vec2 size, const char *fmt, ...) {
@@ -280,7 +289,6 @@ void hit_s1_bottom_panel(hit_main *cv)
         nk_layout_row_dynamic(cv->nk_ctx, win_height*.7, 3);
         if(nk_button_label(cv->nk_ctx, "Save File"))
         {
-            //TODO: Save the file
             for(int i = 0; i<cv->save_file.block_count; i++)
             {
                 if(cv->s1_adv && cv->save_file.blocks[i].header.id == FOURCC_LEDR)
@@ -291,9 +299,25 @@ void hit_s1_bottom_panel(hit_main *cv)
                 }
             }
             
-            
-            bfbb_save_file_write_out(&cv->save_file, "GameDataOut.xsv", 0);
-            
+            int save_as_gci = -1;
+            int extension_supplied = -1;
+            static char path_buffer[4096];
+            int save_success = 0;
+            if (!hit_file_select_write(path_buffer, sizeof(path_buffer), &save_as_gci, &extension_supplied)) {
+                assert(save_as_gci == 0 || save_as_gci == 1);
+                if (!extension_supplied) {
+                    char *exts[] = { ".xsv", ".gci" };
+                    char *ext = exts[save_as_gci];
+                    // NOTE(jelly): i hate C
+                    strncat(path_buffer, ext, sizeof(path_buffer) - strlen(path_buffer) - 1);
+                }
+                if (bfbb_save_file_write_out(&cv->save_file, path_buffer, save_as_gci)) {
+                    save_success = 1;
+                }
+            }
+            if (!save_success) {
+                hit_message_box_ok("Save Failed", "Failed to Save the File :(. Sorry.");
+            }
         }
         if(nk_button_label(cv->nk_ctx, cv->s1_adv?"Hex":"Simple"))
         {
@@ -313,7 +337,7 @@ Home = 0;
 
 -------------------------------------------*/
 
-void hit_screen_home(hit_main *cv)
+void hit_screen_hiphop(hit_main *cv)
 {
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE
     hit_s0_data(cv);
@@ -335,7 +359,7 @@ void hit_update_and_render(hit_main *cv)
     {
         case(1):
         {
-            hit_screen_home(cv);
+            hit_screen_hiphop(cv);
             break;
         }
         default:
@@ -346,12 +370,10 @@ void hit_update_and_render(hit_main *cv)
     }
 }
 
-int hit_file_select(char* buffer, int bufferlen);
-
 void hit_common_init(hit_main *cv)
 {
     char buffer[PATH_BUFFER_SIZE];
-    if(!hit_file_select(buffer, PATH_BUFFER_SIZE))
+    if(!hit_file_select_read(buffer, PATH_BUFFER_SIZE))
     {
         FILE *in = fopen(buffer, "rb");
         if (in) {
@@ -373,9 +395,3 @@ void hit_common_init(hit_main *cv)
     hh_read_file_from_disk(cv->hiphop, "gl01.HIP");
 #endif
 }
-
-#ifdef _WIN32
-#include "win32_d3d9_renderer.c"
-#elif __linux__
-#include "sdlrender.c"
-#endif
