@@ -47,3 +47,33 @@ u64 bit_eat(bit_reader *reader, u32 count) {
 s32 bit_eat_s32(bit_reader *reader) {
     return bit_eat(reader, 32);
 }
+
+typedef struct {
+    int size;
+    unsigned char *bytes;
+    int at;
+} bit_writer;
+
+void bit_writer_safe_or(bit_writer *b, int index, unsigned char v) {
+    if (index < b->size) {
+        b->bytes[index] |= v;
+    }
+}
+
+int bit_push(bit_writer *b, u64 bits, u32 count) {
+    assert((bits & ((1ULL<<count) - 1)) == bits); // NOTE(jelly): make sure `bits` actually fits into `count` bits
+    if (b->at + count <= b->size*8) {
+        u32 byte_index = b->at / 8;
+        u32 bit_index = b->at % 8;
+        int i = 0;
+        bits <<= bit_index;
+        while (bits) {
+            bit_writer_safe_or(b, byte_index + i++, bits & 0xff);
+            bits >>= 8;
+        }
+        b->at += count;
+        return 1;
+    }
+    return 0;
+}
+int bit_push_s32(bit_writer *b, s32 n) { return bit_push(b, n, 32); }
