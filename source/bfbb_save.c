@@ -457,7 +457,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
 
 void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
     int size_of_data = 0xc9c8;
-    uint32 sfil_size = size_of_data - b->size - 8;
+    uint32 sfil_size = size_of_data - b->size;
     uint32 sfil_bytes_used = 8;
     
     if (is_gci) {
