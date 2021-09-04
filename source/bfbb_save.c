@@ -102,6 +102,7 @@ typedef struct {
     int32 version;
 } bfbb_save_file_block_svid;
 
+
 typedef struct {
     int32 socks;
     int32 pickups;
@@ -116,6 +117,7 @@ typedef struct {
     int32 has_cruise_bubble;
     bfbb_save_file_level_collectables level_collectables[LEVEL_COUNT];
     int32 total_socks;
+    char cutscene_played[14];
 } bfbb_save_file_block_plyr;
 
 typedef struct {
@@ -295,6 +297,10 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 }
                 
                 p.total_socks = bit_eat_s32(&br);
+                for(int i = 0; i<14; i++)
+                {
+                    p.cutscene_played[i] = (char)bit_eat_s32(&br);
+                }
                 block->plyr = p;
                 break;
             }
@@ -419,12 +425,27 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     write_bytes(b, (unsigned char *)&block->header, sizeof(block->header));
     
     {
-        bit_writer bw = {b->max_size - b->size, b->data + b->size};
+        bit_writer bw = {b->max_size - b->size, b->bytes + b->size};
         switch (block->header.id) {
             case FOURCC_PLYR: {
                 bit_push(&bw, 1, 1);
-                // more stuff
-                
+                bit_push_s32(&bw, block->plyr.max_health);
+                bit_push_s32(&bw, block->plyr.character);
+                bit_push_s32(&bw, block->plyr.shinies);
+                bit_push_s32(&bw, block->plyr.spats);
+                bit_push_s32(&bw, block->plyr.has_bubble_bowl);
+                bit_push_s32(&bw, block->plyr.has_cruise_bubble);
+                for(int i = 0; i<LEVEL_COUNT; i++)
+                {
+                    bit_push_s32(&bw, block->plyr.level_collectables[i].socks);
+                    bit_push_s32(&bw, block->plyr.level_collectables[i].pickups);
+                }
+                bit_push_s32(&bw, block->plyr.total_socks);
+                for(int i = 0; i<14; i++)
+                {
+                    bit_push_s32(&bw, block->plyr.cutscene_played[i]);
+                }
+                b->size+=size_to_write;
             } break;
             default: write_bytes(b, block->raw_bytes, size_to_write);
         }

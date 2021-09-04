@@ -149,6 +149,18 @@ char* thumbnail_label_from_id(int32_t id)
     return lookup[id];
 }
 
+uint32 drawable_block_ids[] = {
+    FOURCC_PLYR, FOURCC_LEDR, FOURCC_ROOM
+};
+#define ArrayCount(arr) (sizeof(arr)/sizeof((arr)[0]))
+
+int is_drawable_block(bfbb_save_file_block *block) {
+    uint32 id = block->header.id;
+    for (int i = 0; i < ArrayCount(drawable_block_ids); i++) {
+        if (id == drawable_block_ids[i]) return 1;
+    }
+    return 0;
+}
 void hit_s1_data(hit_main *cv)
 {
     if(!cv->save_file_is_loaded)
@@ -175,14 +187,15 @@ void hit_s1_data(hit_main *cv)
     
     if(nk_begin(cv->nk_ctx, "Data Panel", nk_rect(0, win_height_offset, window_width, win_height), NK_WINDOW_BORDER))
     {
-        char buffer[1024];
-        
+        int kj = 0;
         for(int i = 0; i < block_count; i++)
         {
-            sprintf(buffer, "Bytes used: %d", blocks[i].header.bytes_used);
-            if(!(i%3))
-                nk_layout_row_dynamic(cv->nk_ctx, win_height/3, 3);
+            if(!is_drawable_block(&save_file->blocks[i]))
+                continue;
             
+            if(!(kj%3))
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3, 3);
+            kj++;
             char title[16] = {0};
             for (int j = 0; j < 4; j++) {
                 title[j] = blocks[i].header.id_chars[3-j];
@@ -190,8 +203,6 @@ void hit_s1_data(hit_main *cv)
             
             if(nk_group_begin_titled(cv->nk_ctx, title, title, NK_WINDOW_BORDER | NK_WINDOW_TITLE))
             {
-                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                nk_label(cv->nk_ctx, buffer, NK_TEXT_ALIGN_CENTERED);
                 switch(blocks[i].header.id)
                 {
                     case(FOURCC_LEDR):
@@ -256,6 +267,7 @@ void hit_s1_data(hit_main *cv)
                             break;
                         }
                     }
+                    #ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
                     default:
                     {
                         for(int b = 0; b < blocks[i].header.bytes_used; b++)
@@ -272,6 +284,8 @@ void hit_s1_data(hit_main *cv)
                         }
                         break;
                     }
+                    #endif
+
                 }
                 nk_group_end(cv->nk_ctx);
             }
@@ -289,6 +303,7 @@ void hit_s1_bottom_panel(hit_main *cv)
         nk_layout_row_dynamic(cv->nk_ctx, win_height*.7, 3);
         if(nk_button_label(cv->nk_ctx, "Save File"))
         {
+            #ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
             for(int i = 0; i<cv->save_file.block_count; i++)
             {
                 if(cv->s1_adv && cv->save_file.blocks[i].header.id == FOURCC_LEDR)
@@ -298,7 +313,7 @@ void hit_s1_bottom_panel(hit_main *cv)
                     cv->save_file.blocks[i].raw_bytes[y] = hex_string_to_byte(&bytes_in_hex[i][y*3]);
                 }
             }
-            
+            #endif
             int save_as_gci = -1;
             int extension_supplied = -1;
             static char path_buffer[4096];
@@ -319,10 +334,7 @@ void hit_s1_bottom_panel(hit_main *cv)
                 hit_message_box_ok("Save Failed", "Failed to Save the File :(. Sorry.");
             }
         }
-        if(nk_button_label(cv->nk_ctx, cv->s1_adv?"Hex":"Simple"))
-        {
-            cv->s1_adv = !cv->s1_adv;
-        }
+        cv->s1_adv = 1;
         nk_label(cv->nk_ctx, cv->s1_fpath, NK_TEXT_ALIGN_CENTERED);
     }
     nk_end(cv->nk_ctx);
