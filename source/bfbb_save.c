@@ -23,7 +23,18 @@ typedef  int32_t  int32;
 #include "hmac_sha1.c"
 #include "scenedata/hb01.h"
 #include "scenedata/hb02.h"
+#include "scenedata/hb03.h"
+#include "scenedata/hb04.h"
+#include "scenedata/hb05.h"
+#include "scenedata/hb06.h"
+#include "scenedata/hb07.h"
+#include "scenedata/hb08.h"
+#include "scenedata/hb09.h"
+//#include "scenedata/hb10.h"
 #include "scenedata/jf01.h"
+#include "scenedata/jf02.h"
+#include "scenedata/jf03.h"
+#include "scenedata/jf04.h"
 
 // NOTE(jelly): this code (and table) is based off of the crc32 code from the decomp
 //              https://github.com/bfbbdecomp/bfbb/blob/2bc99a1efcb8fab4cbccfc416d226f4a54b851ab/src/Core/x/xutil.cpp
@@ -80,9 +91,11 @@ uint32 crc32_get_checksum(char *data, int size) {
 
 #define ENT_TYPE_TRIGGER 1
 #define ENT_TYPE_PICKUP 4
+#define ENT_TYPE_TIMER 14
 #define ENT_TYPE_PORTAL 16
 #define ENT_TYPE_COUNTER 22
 #define ENT_TYPE_DISPATCHER 30
+#define ENT_TYPE_TELEPORTBOX 49
 #define ENT_TYPE_TASKBOX 53
 
 #define BFBB_SAVE_FILE_LEDR_RANDOM_TEXT "--TakeMeToYourLeader--"
@@ -147,6 +160,13 @@ typedef struct {
 
 typedef struct {
     u8 base_enable;
+    u8 state;
+    //TODO(Will): Make this a float
+    u32 seconds_left;
+} base_type_timer;
+
+typedef struct {
+    u8 base_enable;
     s16 count;
     u8 state;
 } base_type_counter;
@@ -157,6 +177,12 @@ typedef struct {
 } base_type_dispatcher;
 
 typedef struct {
+    u8 base_enable;
+    u8 show_ent;
+    u8 opened;
+} base_type_teleportbox;
+
+typedef struct {
     u8 state;
 } base_type_taskbox;
 
@@ -165,8 +191,10 @@ typedef struct {
   union {
     base_type_trigger trigger;
     base_type_pickup pickup;
+    base_type_timer timer;
     base_type_counter counter;
     base_type_dispatcher dispatcher;
+    base_type_teleportbox tpbox;
     base_type_taskbox taskbox;
   };
 } base_type;
@@ -229,7 +257,20 @@ typedef struct {
 #define FOURCC_LEDR FOURCC_CONST('L', 'E', 'D', 'R')
 #define FOURCC_ROOM FOURCC_CONST('R', 'O', 'O', 'M')
 #define FOURCC_PLYR FOURCC_CONST('P', 'L', 'Y', 'R')
+#define FOURCC_HB01 FOURCC_CONST('H', 'B', '0', '1')
 #define FOURCC_HB02 FOURCC_CONST('H', 'B', '0', '2')
+#define FOURCC_HB03 FOURCC_CONST('H', 'B', '0', '3')
+#define FOURCC_HB04 FOURCC_CONST('H', 'B', '0', '4')
+#define FOURCC_HB05 FOURCC_CONST('H', 'B', '0', '5')
+#define FOURCC_HB06 FOURCC_CONST('H', 'B', '0', '6')
+#define FOURCC_HB07 FOURCC_CONST('H', 'B', '0', '7')
+#define FOURCC_HB08 FOURCC_CONST('H', 'B', '0', '8')
+#define FOURCC_HB09 FOURCC_CONST('H', 'B', '0', '9')
+#define FOURCC_HB10 FOURCC_CONST('H', 'B', '1', '0')
+#define FOURCC_JF01 FOURCC_CONST('J', 'F', '0', '1')
+#define FOURCC_JF02 FOURCC_CONST('J', 'F', '0', '2')
+#define FOURCC_JF03 FOURCC_CONST('J', 'F', '0', '3')
+#define FOURCC_JF04 FOURCC_CONST('J', 'F', '0', '4')
 #define FOURCC_PREF FOURCC_CONST('P', 'R', 'E', 'F')
 #define FOURCC_SVID FOURCC_CONST('S', 'V', 'I', 'D')
 #define FOURCC_SFIL FOURCC_CONST('S', 'F', 'I', 'L')
@@ -356,6 +397,13 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
             //u8 enthidden = state & 0x4;
             break;
         }
+        case ENT_TYPE_TIMER:
+        {
+            b.timer.base_enable = (u8)bit_eat(br, 1);
+            b.timer.state = (u8)bit_eat(br, 8);
+            b.timer.seconds_left = (u32)bit_eat(br, 32);
+            break;
+        }
         case ENT_TYPE_COUNTER:
         {
             b.counter.base_enable = (u8)bit_eat(br, 1);
@@ -368,6 +416,13 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
             b.dispatcher.base_enable = (u8)bit_eat(br, 1);
             break;
         }
+        case ENT_TYPE_TELEPORTBOX:
+        {
+            b.tpbox.base_enable = (u8)bit_eat(br, 1);
+            b.tpbox.show_ent = (u8)bit_eat(br, 1);
+            b.tpbox.opened = (u8)bit_eat(br, 1);
+            break;
+        }
         case ENT_TYPE_TASKBOX:
         {
             b.taskbox.state = (u8)bit_eat(br, 8);
@@ -375,7 +430,7 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
         }
         default:
         {
-            printf("Unknown base type %d", p[1]);
+            printf("Unknown base type %d\n", p[1]);
             assert(0);
         }
     }
@@ -416,6 +471,22 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 block->plyr = p;
                 break;
             }
+            case(FOURCC_HB01):
+            {
+                bfbb_save_file_block_scene scene = {0};
+                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
+                bit_reader br = {b};
+                bit_eat(&br, 1);
+                scene.offsetx = bit_eat(&br, 32);
+                scene.offsety = bit_eat(&br, 32);
+                for(int i = 0; i<ArrayCount(HB01_table); i++)
+                {
+                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)HB01_table));
+                }
+                printf("%d", (s32)br.at_bit/8);
+                block->scene = scene;
+                break;
+            }
             case(FOURCC_HB02):
             {
                 bfbb_save_file_block_scene scene = {0};
@@ -429,6 +500,67 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                     arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)HB02_table));
                 }
                 block->scene = scene;
+                break;
+            }
+            case(FOURCC_JF01):
+            {
+                bfbb_save_file_block_scene scene = {0};
+                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
+                bit_reader br = {b};
+                bit_eat(&br, 1);
+                scene.offsetx = bit_eat(&br, 32);
+                scene.offsety = bit_eat(&br, 32);
+                for(int i = 0; i<ArrayCount(JF01_table); i++)
+                {
+                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF01_table));
+                }
+                block->scene = scene;
+                break;
+            }
+            case(FOURCC_JF02):
+            {
+                bfbb_save_file_block_scene scene = {0};
+                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
+                bit_reader br = {b};
+                bit_eat(&br, 1);
+                scene.offsetx = bit_eat(&br, 32);
+                scene.offsety = bit_eat(&br, 32);
+                for(int i = 0; i<ArrayCount(JF02_table); i++)
+                {
+                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF02_table));
+                }
+                block->scene = scene;
+                break;
+            }
+            case(FOURCC_JF03):
+            {
+                bfbb_save_file_block_scene scene = {0};
+                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
+                bit_reader br = {b};
+                bit_eat(&br, 1);
+                scene.offsetx = bit_eat(&br, 32);
+                scene.offsety = bit_eat(&br, 32);
+                for(int i = 0; i<ArrayCount(JF03_table); i++)
+                {
+                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF03_table));
+                }
+                block->scene = scene;
+                break;
+            }
+            case(FOURCC_JF04):
+            {
+                bfbb_save_file_block_scene scene = {0};
+                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
+                bit_reader br = {b};
+                bit_eat(&br, 1);
+                scene.offsetx = bit_eat(&br, 32);
+                scene.offsety = bit_eat(&br, 32);
+                for(int i = 0; i<ArrayCount(JF04_table); i++)
+                {
+                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF04_table));
+                }
+                block->scene = scene;
+                break;
             }
         }
     }
@@ -545,6 +677,13 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
             bit_push(b, bt.pickup.collected, 1);
             break;
         }
+        case ENT_TYPE_TIMER:
+        {
+            bit_push(b, bt.timer.base_enable, 1);
+            bit_push(b, bt.timer.state, 8);
+            bit_push(b, bt.timer.seconds_left, 32);
+            break;
+        }
         case ENT_TYPE_COUNTER:
         {
             bit_push(b, bt.counter.base_enable, 1);
@@ -555,6 +694,13 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
         case ENT_TYPE_DISPATCHER:
         {
             bit_push(b, bt.dispatcher.base_enable, 1);
+            break;
+        }
+        case ENT_TYPE_TELEPORTBOX:
+        {
+            bit_push(b, bt.tpbox.base_enable, 1);
+            bit_push(b, bt.tpbox.show_ent, 1);
+            bit_push(b, bt.tpbox.opened, 1);
             break;
         }
         case ENT_TYPE_TASKBOX:
@@ -568,6 +714,13 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
             assert(0);
         }
     }
+}
+
+void bfbb_save_file_write_scene_block_stuff(bit_writer *bw, bfbb_save_file_block *block)
+{
+    bit_push(bw, 1, 1);
+    bit_push(bw, block->scene.offsetx, 32);
+    bit_push(bw, block->scene.offsety, 32);
 }
 
 bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_file_block *block, int is_gci) {
@@ -623,13 +776,52 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 }
                 b->size+=size_to_write;
             } break;
+            case FOURCC_HB01: {
+                bfbb_save_file_write_scene_block_stuff(&bw, block);
+                for(int j = 0; j<arrlen(block->scene.base); j++)
+                {
+                    bfbb_save_file_write_scene_block(&bw, (u32*)HB01_table, j, block);
+                }
+                printf("%d", bw.at);
+                b->size+=size_to_write;
+            } break;
             case FOURCC_HB02: {
-                bit_push(&bw, 1, 1);
-                bit_push(&bw, block->scene.offsetx, 32);
-                bit_push(&bw, block->scene.offsety, 32);
+                bfbb_save_file_write_scene_block_stuff(&bw, block);
                 for(int j = 0; j<arrlen(block->scene.base); j++)
                 {
                     bfbb_save_file_write_scene_block(&bw, (u32*)HB02_table, j, block);
+                }
+                b->size+=size_to_write;
+            } break;
+            case FOURCC_JF01: {
+                bfbb_save_file_write_scene_block_stuff(&bw, block);
+                for(int j = 0; j<arrlen(block->scene.base); j++)
+                {
+                    bfbb_save_file_write_scene_block(&bw, (u32*)JF01_table, j, block);
+                }
+                b->size+=size_to_write;
+            } break;
+            case FOURCC_JF02: {
+                bfbb_save_file_write_scene_block_stuff(&bw, block);
+                for(int j = 0; j<arrlen(block->scene.base); j++)
+                {
+                    bfbb_save_file_write_scene_block(&bw, (u32*)JF02_table, j, block);
+                }
+                b->size+=size_to_write;
+            } break;
+            case FOURCC_JF03: {
+                bfbb_save_file_write_scene_block_stuff(&bw, block);
+                for(int j = 0; j<arrlen(block->scene.base); j++)
+                {
+                    bfbb_save_file_write_scene_block(&bw, (u32*)JF03_table, j, block);
+                }
+                b->size+=size_to_write;
+            } break;
+            case FOURCC_JF04: {
+                bfbb_save_file_write_scene_block_stuff(&bw, block);
+                for(int j = 0; j<arrlen(block->scene.base); j++)
+                {
+                    bfbb_save_file_write_scene_block(&bw, (u32*)JF04_table, j, block);
                 }
                 b->size+=size_to_write;
             } break;
@@ -642,7 +834,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
 }
 
 void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
-    int size_of_data = 0xc9c8;
+    int size_of_data = 0xc9d4;
     //TODO(Will): Figure out how to actually fucking do this :)
     uint32 sfil_size = size_of_data - b->size - 12;
     uint32 sfil_bytes_used = 8;
