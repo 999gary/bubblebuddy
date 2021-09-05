@@ -61,7 +61,7 @@ void bit_writer_safe_or(bit_writer *b, int index, unsigned char v) {
 }
 
 int bit_push(bit_writer *b, u64 bits, u32 count) {
-    assert((bits & ((1ULL<<count) - 1)) == bits); // NOTE(jelly): make sure `bits` actually fits into `count` bits
+    bits &= ((1ULL << count)-1);
     if (b->at + count <= b->size*8) {
         u32 byte_index = b->at / 8;
         u32 bit_index = b->at % 8;

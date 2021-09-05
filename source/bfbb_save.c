@@ -16,8 +16,14 @@ typedef  int32_t  int32;
 
 // NOTE(jelly): all code below assumes a little-endian architecture for now.
 
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
+
 #include "bfbb_gci_header.h"
 #include "hmac_sha1.c"
+#include "scenedata/hb01.h"
+#include "scenedata/hb02.h"
+#include "scenedata/jf01.h"
 
 // NOTE(jelly): this code (and table) is based off of the crc32 code from the decomp
 //              https://github.com/bfbbdecomp/bfbb/blob/2bc99a1efcb8fab4cbccfc416d226f4a54b851ab/src/Core/x/xutil.cpp
@@ -72,6 +78,13 @@ uint32 crc32_get_checksum(char *data, int size) {
     return xUtil_crc_update(-1, data, size);
 }
 
+#define ENT_TYPE_TRIGGER 1
+#define ENT_TYPE_PICKUP 4
+#define ENT_TYPE_PORTAL 16
+#define ENT_TYPE_COUNTER 22
+#define ENT_TYPE_DISPATCHER 30
+#define ENT_TYPE_TASKBOX 53
+
 #define BFBB_SAVE_FILE_LEDR_RANDOM_TEXT "--TakeMeToYourLeader--"
 
 #pragma pack(push, 1)
@@ -113,12 +126,57 @@ typedef struct {
     int32 character;
     int32 shinies;
     int32 spats;
-    int32 has_bubble_bowl;
-    int32 has_cruise_bubble;
+    unsigned char has_bubble_bowl;
+    unsigned char has_cruise_bubble;
     bfbb_save_file_level_collectables level_collectables[LEVEL_COUNT];
     int32 total_socks;
     char cutscene_played[14];
 } bfbb_save_file_block_plyr;
+
+typedef struct {
+    u8 base_enable;
+    u8 show_ent;
+} base_type_trigger;
+
+typedef struct {
+    u8 base_enable;
+    u8 show_ent;
+    u8 state;
+    u8 collected;
+} base_type_pickup;
+
+typedef struct {
+    u8 base_enable;
+    s16 count;
+    u8 state;
+} base_type_counter;
+
+//wtf does this do
+typedef struct {
+    u8 base_enable;
+} base_type_dispatcher;
+
+typedef struct {
+    u8 state;
+} base_type_taskbox;
+
+typedef struct {
+  int id, type;
+  union {
+    base_type_trigger trigger;
+    base_type_pickup pickup;
+    base_type_counter counter;
+    base_type_dispatcher dispatcher;
+    base_type_taskbox taskbox;
+  };
+} base_type;
+
+typedef struct {
+    //TODO(Will): Jelly fix this :)
+    u32 offsetx;
+    u32 offsety;
+    base_type *base;
+} bfbb_save_file_block_scene;
 
 typedef struct {
     union {
@@ -140,6 +198,7 @@ typedef struct {
         bfbb_save_file_block_pref pref;
         bfbb_save_file_block_svid svid;
         bfbb_save_file_block_plyr plyr;
+        bfbb_save_file_block_scene scene;
     };
 } bfbb_save_file_block;
 #pragma pack(pop)
@@ -170,9 +229,13 @@ typedef struct {
 #define FOURCC_LEDR FOURCC_CONST('L', 'E', 'D', 'R')
 #define FOURCC_ROOM FOURCC_CONST('R', 'O', 'O', 'M')
 #define FOURCC_PLYR FOURCC_CONST('P', 'L', 'Y', 'R')
+#define FOURCC_HB02 FOURCC_CONST('H', 'B', '0', '2')
 #define FOURCC_PREF FOURCC_CONST('P', 'R', 'E', 'F')
 #define FOURCC_SVID FOURCC_CONST('S', 'V', 'I', 'D')
 #define FOURCC_SFIL FOURCC_CONST('S', 'F', 'I', 'L')
+
+
+
 
 void byteswap32(uint32 *p) {
     uint32 n = *p;
@@ -270,6 +333,55 @@ int bfbb_save_file_block_read(buffer *b, bfbb_save_file_block *new_block, int is
     return -1;
 }
 
+base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s32 block_index, bit_reader* br, u32* table)
+{
+    base_type b = {0};
+    u32 *p = &table[block_index*2];
+    b.id = p[0];
+    b.type = p[1];
+    switch(p[1])
+    {
+        case ENT_TYPE_TRIGGER:
+        {
+            b.trigger.base_enable = (u8)bit_eat(br, 1);
+            b.trigger.show_ent = (u8)bit_eat(br, 1);
+            break;
+        }
+        case ENT_TYPE_PICKUP:
+        {
+            b.pickup.base_enable = (u8)bit_eat(br, 1);
+            b.pickup.show_ent = (u8)bit_eat(br, 1);
+            b.pickup.state = bit_eat(br, 7);
+            b.pickup.collected = bit_eat(br, 1);
+            //u8 enthidden = state & 0x4;
+            break;
+        }
+        case ENT_TYPE_COUNTER:
+        {
+            b.counter.base_enable = (u8)bit_eat(br, 1);
+            b.counter.count = (s16)bit_eat(br, 16);
+            b.counter.state = (u8)bit_eat(br, 8);
+            break;
+        }
+        case ENT_TYPE_DISPATCHER:
+        {
+            b.dispatcher.base_enable = (u8)bit_eat(br, 1);
+            break;
+        }
+        case ENT_TYPE_TASKBOX:
+        {
+            b.taskbox.state = (u8)bit_eat(br, 8);
+            break;
+        }
+        default:
+        {
+            printf("Unknown base type %d", p[1]);
+            assert(0);
+        }
+    }
+    return b;
+}
+
 int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
 {
     for(int i = 0; i<save_file->block_count; i++)
@@ -287,8 +399,8 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 p.character = bit_eat_s32(&br);
                 p.shinies = bit_eat_s32(&br);
                 p.spats = bit_eat_s32(&br);
-                p.has_bubble_bowl = bit_eat_s32(&br);
-                p.has_cruise_bubble = bit_eat_s32(&br);
+                p.has_bubble_bowl = bit_eat(&br, 8);
+                p.has_cruise_bubble = bit_eat(&br, 8);
                 
                 for(int i = 0; i<LEVEL_COUNT; i++)
                 {
@@ -303,6 +415,20 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 }
                 block->plyr = p;
                 break;
+            }
+            case(FOURCC_HB02):
+            {
+                bfbb_save_file_block_scene scene = {0};
+                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
+                bit_reader br = {b};
+                bit_eat(&br, 1);
+                scene.offsetx = bit_eat(&br, 32);
+                scene.offsety = bit_eat(&br, 32);
+                for(int i = 0; i<ArrayCount(HB02_table); i++)
+                {
+                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)HB02_table));
+                }
+                block->scene = scene;
             }
         }
     }
@@ -390,8 +516,58 @@ void write_byte_n_times(write_buffer *b, unsigned char v, int n) {
     }
 }
 
+
+void bfbb_save_file_append_zero_padding(write_buffer *b, int padding_size) {
+    write_byte_n_times(b, 0x00, padding_size);
+}
+
 void bfbb_save_file_append_padding(write_buffer *b, int padding_size) {
     write_byte_n_times(b, 0xbf, padding_size);
+}
+
+void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_save_file_block *block)
+{
+    u32 *p = &array[n*2];
+    base_type bt = block->scene.base[n];
+    switch(p[1])
+    {
+        case ENT_TYPE_TRIGGER:
+        {
+            bit_push(b, bt.trigger.base_enable, 1);
+            bit_push(b, bt.trigger.show_ent, 1);
+            break;
+        }
+        case ENT_TYPE_PICKUP:
+        {
+            bit_push(b, bt.pickup.base_enable, 1);
+            bit_push(b, bt.pickup.show_ent, 1);
+            bit_push(b, bt.pickup.state, 7);
+            bit_push(b, bt.pickup.collected, 1);
+            break;
+        }
+        case ENT_TYPE_COUNTER:
+        {
+            bit_push(b, bt.counter.base_enable, 1);
+            bit_push(b, bt.counter.count, 16);
+            bit_push(b, bt.counter.state, 8);
+            break;
+        }
+        case ENT_TYPE_DISPATCHER:
+        {
+            bit_push(b, bt.dispatcher.base_enable, 1);
+            break;
+        }
+        case ENT_TYPE_TASKBOX:
+        {
+            bit_push(b, bt.taskbox.state, 8);
+            break;
+        }
+        default:
+        {
+            printf("Unknown base type %d", p[1]);
+            assert(0);
+        }
+    }
 }
 
 bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_file_block *block, int is_gci) {
@@ -433,8 +609,8 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 bit_push_s32(&bw, block->plyr.character);
                 bit_push_s32(&bw, block->plyr.shinies);
                 bit_push_s32(&bw, block->plyr.spats);
-                bit_push_s32(&bw, block->plyr.has_bubble_bowl);
-                bit_push_s32(&bw, block->plyr.has_cruise_bubble);
+                bit_push(&bw, block->plyr.has_bubble_bowl, 8);
+                bit_push(&bw, block->plyr.has_cruise_bubble, 8);
                 for(int i = 0; i<LEVEL_COUNT; i++)
                 {
                     bit_push_s32(&bw, block->plyr.level_collectables[i].socks);
@@ -444,6 +620,16 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 for(int i = 0; i<14; i++)
                 {
                     bit_push_s32(&bw, block->plyr.cutscene_played[i]);
+                }
+                b->size+=size_to_write;
+            } break;
+            case FOURCC_HB02: {
+                bit_push(&bw, 1, 1);
+                bit_push(&bw, block->scene.offsetx, 32);
+                bit_push(&bw, block->scene.offsety, 32);
+                for(int j = 0; j<arrlen(block->scene.base); j++)
+                {
+                    bfbb_save_file_write_scene_block(&bw, (u32*)HB02_table, j, block);
                 }
                 b->size+=size_to_write;
             } break;
@@ -457,7 +643,8 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
 
 void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
     int size_of_data = 0xc9c8;
-    uint32 sfil_size = size_of_data - b->size;
+    //TODO(Will): Figure out how to actually fucking do this :)
+    uint32 sfil_size = size_of_data - b->size - 12;
     uint32 sfil_bytes_used = 8;
     
     if (is_gci) {
@@ -478,6 +665,7 @@ void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
         byteswap32(&sfil_size);
     write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
     write_bytes(b, (unsigned char *)"RyanNeil", 8);
+    
     bfbb_save_file_append_padding(b, sfil_size - 8);
 }
 

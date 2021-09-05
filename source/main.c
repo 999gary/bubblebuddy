@@ -2,6 +2,8 @@
 #include "config.h"
 #include "bit_methods.h"
 
+#define ArrayCount(arr) (sizeof(arr)/sizeof((arr)[0]))
+
 #ifdef _WIN32
 #include "win32_d3d9_include.h"
 #elif __linux__ 
@@ -150,9 +152,9 @@ char* thumbnail_label_from_id(int32_t id)
 }
 
 uint32 drawable_block_ids[] = {
-    FOURCC_PLYR, FOURCC_LEDR, FOURCC_ROOM
+    FOURCC_PLYR, FOURCC_LEDR, FOURCC_ROOM, FOURCC_HB02
 };
-#define ArrayCount(arr) (sizeof(arr)/sizeof((arr)[0]))
+
 
 int is_drawable_block(bfbb_save_file_block *block) {
     uint32 id = block->header.id;
@@ -261,11 +263,45 @@ void hit_s1_data(hit_main *cv)
                             nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                             nk_property_int(cv->nk_ctx, "Spats", 0, &blocks[i].plyr.spats, 100, 1, 1);
                             nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                            nk_checkbox_label(cv->nk_ctx, "BB Unlocked", &blocks[i].plyr.has_bubble_bowl);
+                            nk_bool a, b;
+                            a = !blocks[i].plyr.has_bubble_bowl;
+                            b = !blocks[i].plyr.has_cruise_bubble;
+                            nk_checkbox_label(cv->nk_ctx, "BB Unlocked", &a);
                             nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                            nk_checkbox_label(cv->nk_ctx, "CB Unlocked", &blocks[i].plyr.has_cruise_bubble);
+                            nk_checkbox_label(cv->nk_ctx, "CB Unlocked", &b);
+
+                            blocks[i].plyr.has_bubble_bowl = !a;
+                            blocks[i].plyr.has_cruise_bubble = !b;
                             break;
                         }
+                    }
+                    case(FOURCC_HB02):
+                    {
+                        for(int j = 0; j<arrlen(blocks[i].scene.base); j++)
+                        {
+                            base_type* b = &blocks[i].scene.base[j];
+                            switch(b->type)
+                            {
+                                case(ENT_TYPE_TRIGGER):
+                                {
+                                    nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                                    nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "ID: %x", b->id);
+                                    nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Type: %x", b->type);   
+                                    nk_bool a, c;
+                                    a = b->trigger.base_enable;
+                                    c = b->trigger.show_ent;
+                                    nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                    nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
+                                    nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                    nk_checkbox_label(cv->nk_ctx, "Shown", &c);
+
+                                    b->trigger.base_enable = a;
+                                    b->trigger.show_ent = c;
+                                    
+                                }
+                            }
+                        }
+                        break;
                     }
                     #ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
                     default:
