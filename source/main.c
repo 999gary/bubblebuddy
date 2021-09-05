@@ -282,7 +282,7 @@ void hit_s1_data(hit_main *cv)
                             base_type* b = &blocks[i].scene.base[j];
                             switch(b->type)
                             {
-                                case(ENT_TYPE_TRIGGER):
+                                case(BASE_TYPE_TRIGGER):
                                 {
                                     nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
                                     nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "ID: %x", b->id);

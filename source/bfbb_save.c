@@ -23,14 +23,14 @@ typedef  int32_t  int32;
 #include "hmac_sha1.c"
 #include "scenedata/hb01.h"
 #include "scenedata/hb02.h"
-#include "scenedata/hb03.h"
+/*#include "scenedata/hb03.h"
 #include "scenedata/hb04.h"
 #include "scenedata/hb05.h"
 #include "scenedata/hb06.h"
 #include "scenedata/hb07.h"
 #include "scenedata/hb08.h"
 #include "scenedata/hb09.h"
-//#include "scenedata/hb10.h"
+//#include "scenedata/hb10.h"*/
 #include "scenedata/jf01.h"
 #include "scenedata/jf02.h"
 #include "scenedata/jf03.h"
@@ -89,14 +89,18 @@ uint32 crc32_get_checksum(char *data, int size) {
     return xUtil_crc_update(-1, data, size);
 }
 
-#define ENT_TYPE_TRIGGER 1
-#define ENT_TYPE_PICKUP 4
-#define ENT_TYPE_TIMER 14
-#define ENT_TYPE_PORTAL 16
-#define ENT_TYPE_COUNTER 22
-#define ENT_TYPE_DISPATCHER 30
-#define ENT_TYPE_TELEPORTBOX 49
-#define ENT_TYPE_TASKBOX 53
+#define BASE_TYPE_TRIGGER 1
+#define BASE_TYPE_PICKUP 4
+#define BASE_TYPE_TIMER 14
+#define BASE_TYPE_PORTAL 16
+#define BASE_TYPE_SFX 19
+#define BASE_TYPE_COUNTER 22
+#define BASE_TYPE_DISPATCHER 30
+#define BASE_TYPE_COND 31
+#define BASE_TYPE_TELEPORTBOX 49
+#define BASE_TYPE_TASKBOX 53
+#define BASE_TYPE_TAXI 57
+#define BASE_TYPE_CAMERAFLY 62
 
 #define BFBB_SAVE_FILE_LEDR_RANDOM_TEXT "--TakeMeToYourLeader--"
 
@@ -167,6 +171,10 @@ typedef struct {
 
 typedef struct {
     u8 base_enable;
+} base_type_sfx;
+
+typedef struct {
+    u8 base_enable;
     s16 count;
     u8 state;
 } base_type_counter;
@@ -175,6 +183,10 @@ typedef struct {
 typedef struct {
     u8 base_enable;
 } base_type_dispatcher;
+
+typedef struct {
+    u8 base_enable;
+} base_type_cond;
 
 typedef struct {
     u8 base_enable;
@@ -187,15 +199,27 @@ typedef struct {
 } base_type_taskbox;
 
 typedef struct {
+    u8 base_enable;
+} base_type_taxi;
+
+typedef struct {
+    u8 base_enable;
+} base_type_camerafly;
+
+typedef struct {
   int id, type;
   union {
     base_type_trigger trigger;
     base_type_pickup pickup;
     base_type_timer timer;
+    base_type_sfx sfx;
     base_type_counter counter;
     base_type_dispatcher dispatcher;
+    base_type_cond cond;
     base_type_teleportbox tpbox;
     base_type_taskbox taskbox;
+    base_type_taxi taxi;
+    base_type_camerafly camfly;
   };
 } base_type;
 
@@ -382,13 +406,13 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
     b.type = p[1];
     switch(p[1])
     {
-        case ENT_TYPE_TRIGGER:
+        case BASE_TYPE_TRIGGER:
         {
             b.trigger.base_enable = (u8)bit_eat(br, 1);
             b.trigger.show_ent = (u8)bit_eat(br, 1);
             break;
         }
-        case ENT_TYPE_PICKUP:
+        case BASE_TYPE_PICKUP:
         {
             b.pickup.base_enable = (u8)bit_eat(br, 1);
             b.pickup.show_ent = (u8)bit_eat(br, 1);
@@ -397,37 +421,57 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
             //u8 enthidden = state & 0x4;
             break;
         }
-        case ENT_TYPE_TIMER:
+        case BASE_TYPE_TIMER:
         {
             b.timer.base_enable = (u8)bit_eat(br, 1);
             b.timer.state = (u8)bit_eat(br, 8);
             b.timer.seconds_left = (u32)bit_eat(br, 32);
             break;
         }
-        case ENT_TYPE_COUNTER:
+        case BASE_TYPE_SFX:
+        {
+            b.sfx.base_enable = (u8)bit_eat(br, 1);
+            break;
+        }
+        case BASE_TYPE_COUNTER:
         {
             b.counter.base_enable = (u8)bit_eat(br, 1);
             b.counter.count = (s16)bit_eat(br, 16);
             b.counter.state = (u8)bit_eat(br, 8);
             break;
         }
-        case ENT_TYPE_DISPATCHER:
+        case BASE_TYPE_DISPATCHER:
         {
             b.dispatcher.base_enable = (u8)bit_eat(br, 1);
             break;
         }
-        case ENT_TYPE_TELEPORTBOX:
+        case BASE_TYPE_COND:
+        {
+            b.cond.base_enable = (u8)bit_eat(br, 1);
+            break;
+        }        
+        case BASE_TYPE_TELEPORTBOX:
         {
             b.tpbox.base_enable = (u8)bit_eat(br, 1);
             b.tpbox.show_ent = (u8)bit_eat(br, 1);
             b.tpbox.opened = (u8)bit_eat(br, 1);
             break;
         }
-        case ENT_TYPE_TASKBOX:
+        case BASE_TYPE_TASKBOX:
         {
             b.taskbox.state = (u8)bit_eat(br, 8);
             break;
         }
+        case BASE_TYPE_TAXI:
+        {
+            b.taxi.base_enable = (u8)bit_eat(br, 1);
+            break;
+        }
+        case BASE_TYPE_CAMERAFLY:
+        {
+            b.camfly.base_enable = (u8)bit_eat(br, 1);
+            break;
+        }          
         default:
         {
             printf("Unknown base type %d\n", p[1]);
@@ -663,13 +707,13 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
     base_type bt = block->scene.base[n];
     switch(p[1])
     {
-        case ENT_TYPE_TRIGGER:
+        case BASE_TYPE_TRIGGER:
         {
             bit_push(b, bt.trigger.base_enable, 1);
             bit_push(b, bt.trigger.show_ent, 1);
             break;
         }
-        case ENT_TYPE_PICKUP:
+        case BASE_TYPE_PICKUP:
         {
             bit_push(b, bt.pickup.base_enable, 1);
             bit_push(b, bt.pickup.show_ent, 1);
@@ -677,35 +721,55 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
             bit_push(b, bt.pickup.collected, 1);
             break;
         }
-        case ENT_TYPE_TIMER:
+        case BASE_TYPE_TIMER:
         {
             bit_push(b, bt.timer.base_enable, 1);
             bit_push(b, bt.timer.state, 8);
             bit_push(b, bt.timer.seconds_left, 32);
             break;
         }
-        case ENT_TYPE_COUNTER:
+        case BASE_TYPE_SFX:
+        {
+            bit_push(b, bt.sfx.base_enable, 1);
+            break;
+        }
+        case BASE_TYPE_COUNTER:
         {
             bit_push(b, bt.counter.base_enable, 1);
             bit_push(b, bt.counter.count, 16);
             bit_push(b, bt.counter.state, 8);
             break;
         }
-        case ENT_TYPE_DISPATCHER:
+        case BASE_TYPE_DISPATCHER:
         {
             bit_push(b, bt.dispatcher.base_enable, 1);
             break;
         }
-        case ENT_TYPE_TELEPORTBOX:
+        case BASE_TYPE_COND:
+        {
+            bit_push(b, bt.cond.base_enable, 1);
+            break;
+        }
+        case BASE_TYPE_TELEPORTBOX:
         {
             bit_push(b, bt.tpbox.base_enable, 1);
             bit_push(b, bt.tpbox.show_ent, 1);
             bit_push(b, bt.tpbox.opened, 1);
             break;
         }
-        case ENT_TYPE_TASKBOX:
+        case BASE_TYPE_TASKBOX:
         {
             bit_push(b, bt.taskbox.state, 8);
+            break;
+        }
+        case BASE_TYPE_TAXI:
+        {
+            bit_push(b, bt.taxi.base_enable, 1);
+            break;
+        }
+        case BASE_TYPE_CAMERAFLY:
+        {
+            bit_push(b, bt.camfly.base_enable, 1);
             break;
         }
         default:
