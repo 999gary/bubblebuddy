@@ -39,49 +39,49 @@ typedef  int32_t  int32;
 // NOTE(jelly): this code (and table) is based off of the crc32 code from the decomp
 //              https://github.com/bfbbdecomp/bfbb/blob/2bc99a1efcb8fab4cbccfc416d226f4a54b851ab/src/Core/x/xutil.cpp
 static const uint32 g_crc32_table[256] = {
-    0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b, 0x1a864db2, 0x1e475005, 
-    0x2608edb8, 0x22c9f00f, 0x2f8ad6d6, 0x2b4bcb61, 0x350c9b64, 0x31cd86d3, 0x3c8ea00a, 0x384fbdbd, 
-    0x4c11db70, 0x48d0c6c7, 0x4593e01e, 0x4152fda9, 0x5f15adac, 0x5bd4b01b, 0x569796c2, 0x52568b75, 
-    0x6a1936c8, 0x6ed82b7f, 0x639b0da6, 0x675a1011, 0x791d4014, 0x7ddc5da3, 0x709f7b7a, 0x745e66cd, 
-    0x9823b6e0, 0x9ce2ab57, 0x91a18d8e, 0x95609039, 0x8b27c03c, 0x8fe6dd8b, 0x82a5fb52, 0x8664e6e5, 
-    0xbe2b5b58, 0xbaea46ef, 0xb7a96036, 0xb3687d81, 0xad2f2d84, 0xa9ee3033, 0xa4ad16ea, 0xa06c0b5d, 
-    0xd4326d90, 0xd0f37027, 0xddb056fe, 0xd9714b49, 0xc7361b4c, 0xc3f706fb, 0xceb42022, 0xca753d95, 
-    0xf23a8028, 0xf6fb9d9f, 0xfbb8bb46, 0xff79a6f1, 0xe13ef6f4, 0xe5ffeb43, 0xe8bccd9a, 0xec7dd02d, 
-    0x34867077, 0x30476dc0, 0x3d044b19, 0x39c556ae, 0x278206ab, 0x23431b1c, 0x2e003dc5, 0x2ac12072, 
-    0x128e9dcf, 0x164f8078, 0x1b0ca6a1, 0x1fcdbb16, 0x018aeb13, 0x054bf6a4, 0x0808d07d, 0x0cc9cdca, 
-    0x7897ab07, 0x7c56b6b0, 0x71159069, 0x75d48dde, 0x6b93dddb, 0x6f52c06c, 0x6211e6b5, 0x66d0fb02, 
-    0x5e9f46bf, 0x5a5e5b08, 0x571d7dd1, 0x53dc6066, 0x4d9b3063, 0x495a2dd4, 0x44190b0d, 0x40d816ba, 
-    0xaca5c697, 0xa864db20, 0xa527fdf9, 0xa1e6e04e, 0xbfa1b04b, 0xbb60adfc, 0xb6238b25, 0xb2e29692, 
-    0x8aad2b2f, 0x8e6c3698, 0x832f1041, 0x87ee0df6, 0x99a95df3, 0x9d684044, 0x902b669d, 0x94ea7b2a, 
-    0xe0b41de7, 0xe4750050, 0xe9362689, 0xedf73b3e, 0xf3b06b3b, 0xf771768c, 0xfa325055, 0xfef34de2, 
-    0xc6bcf05f, 0xc27dede8, 0xcf3ecb31, 0xcbffd686, 0xd5b88683, 0xd1799b34, 0xdc3abded, 0xd8fba05a, 
-    0x690ce0ee, 0x6dcdfd59, 0x608edb80, 0x644fc637, 0x7a089632, 0x7ec98b85, 0x738aad5c, 0x774bb0eb, 
-    0x4f040d56, 0x4bc510e1, 0x46863638, 0x42472b8f, 0x5c007b8a, 0x58c1663d, 0x558240e4, 0x51435d53, 
-    0x251d3b9e, 0x21dc2629, 0x2c9f00f0, 0x285e1d47, 0x36194d42, 0x32d850f5, 0x3f9b762c, 0x3b5a6b9b, 
-    0x0315d626, 0x07d4cb91, 0x0a97ed48, 0x0e56f0ff, 0x1011a0fa, 0x14d0bd4d, 0x19939b94, 0x1d528623, 
-    0xf12f560e, 0xf5ee4bb9, 0xf8ad6d60, 0xfc6c70d7, 0xe22b20d2, 0xe6ea3d65, 0xeba91bbc, 0xef68060b, 
-    0xd727bbb6, 0xd3e6a601, 0xdea580d8, 0xda649d6f, 0xc423cd6a, 0xc0e2d0dd, 0xcda1f604, 0xc960ebb3, 
-    0xbd3e8d7e, 0xb9ff90c9, 0xb4bcb610, 0xb07daba7, 0xae3afba2, 0xaafbe615, 0xa7b8c0cc, 0xa379dd7b, 
-    0x9b3660c6, 0x9ff77d71, 0x92b45ba8, 0x9675461f, 0x8832161a, 0x8cf30bad, 0x81b02d74, 0x857130c3, 
-    0x5d8a9099, 0x594b8d2e, 0x5408abf7, 0x50c9b640, 0x4e8ee645, 0x4a4ffbf2, 0x470cdd2b, 0x43cdc09c, 
-    0x7b827d21, 0x7f436096, 0x7200464f, 0x76c15bf8, 0x68860bfd, 0x6c47164a, 0x61043093, 0x65c52d24, 
-    0x119b4be9, 0x155a565e, 0x18197087, 0x1cd86d30, 0x029f3d35, 0x065e2082, 0x0b1d065b, 0x0fdc1bec, 
-    0x3793a651, 0x3352bbe6, 0x3e119d3f, 0x3ad08088, 0x2497d08d, 0x2056cd3a, 0x2d15ebe3, 0x29d4f654, 
-    0xc5a92679, 0xc1683bce, 0xcc2b1d17, 0xc8ea00a0, 0xd6ad50a5, 0xd26c4d12, 0xdf2f6bcb, 0xdbee767c, 
-    0xe3a1cbc1, 0xe760d676, 0xea23f0af, 0xeee2ed18, 0xf0a5bd1d, 0xf464a0aa, 0xf9278673, 0xfde69bc4, 
-    0x89b8fd09, 0x8d79e0be, 0x803ac667, 0x84fbdbd0, 0x9abc8bd5, 0x9e7d9662, 0x933eb0bb, 0x97ffad0c, 
-    0xafb010b1, 0xab710d06, 0xa6322bdf, 0xa2f33668, 0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4, 
+    0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b, 0x1a864db2, 0x1e475005,
+    0x2608edb8, 0x22c9f00f, 0x2f8ad6d6, 0x2b4bcb61, 0x350c9b64, 0x31cd86d3, 0x3c8ea00a, 0x384fbdbd,
+    0x4c11db70, 0x48d0c6c7, 0x4593e01e, 0x4152fda9, 0x5f15adac, 0x5bd4b01b, 0x569796c2, 0x52568b75,
+    0x6a1936c8, 0x6ed82b7f, 0x639b0da6, 0x675a1011, 0x791d4014, 0x7ddc5da3, 0x709f7b7a, 0x745e66cd,
+    0x9823b6e0, 0x9ce2ab57, 0x91a18d8e, 0x95609039, 0x8b27c03c, 0x8fe6dd8b, 0x82a5fb52, 0x8664e6e5,
+    0xbe2b5b58, 0xbaea46ef, 0xb7a96036, 0xb3687d81, 0xad2f2d84, 0xa9ee3033, 0xa4ad16ea, 0xa06c0b5d,
+    0xd4326d90, 0xd0f37027, 0xddb056fe, 0xd9714b49, 0xc7361b4c, 0xc3f706fb, 0xceb42022, 0xca753d95,
+    0xf23a8028, 0xf6fb9d9f, 0xfbb8bb46, 0xff79a6f1, 0xe13ef6f4, 0xe5ffeb43, 0xe8bccd9a, 0xec7dd02d,
+    0x34867077, 0x30476dc0, 0x3d044b19, 0x39c556ae, 0x278206ab, 0x23431b1c, 0x2e003dc5, 0x2ac12072,
+    0x128e9dcf, 0x164f8078, 0x1b0ca6a1, 0x1fcdbb16, 0x018aeb13, 0x054bf6a4, 0x0808d07d, 0x0cc9cdca,
+    0x7897ab07, 0x7c56b6b0, 0x71159069, 0x75d48dde, 0x6b93dddb, 0x6f52c06c, 0x6211e6b5, 0x66d0fb02,
+    0x5e9f46bf, 0x5a5e5b08, 0x571d7dd1, 0x53dc6066, 0x4d9b3063, 0x495a2dd4, 0x44190b0d, 0x40d816ba,
+    0xaca5c697, 0xa864db20, 0xa527fdf9, 0xa1e6e04e, 0xbfa1b04b, 0xbb60adfc, 0xb6238b25, 0xb2e29692,
+    0x8aad2b2f, 0x8e6c3698, 0x832f1041, 0x87ee0df6, 0x99a95df3, 0x9d684044, 0x902b669d, 0x94ea7b2a,
+    0xe0b41de7, 0xe4750050, 0xe9362689, 0xedf73b3e, 0xf3b06b3b, 0xf771768c, 0xfa325055, 0xfef34de2,
+    0xc6bcf05f, 0xc27dede8, 0xcf3ecb31, 0xcbffd686, 0xd5b88683, 0xd1799b34, 0xdc3abded, 0xd8fba05a,
+    0x690ce0ee, 0x6dcdfd59, 0x608edb80, 0x644fc637, 0x7a089632, 0x7ec98b85, 0x738aad5c, 0x774bb0eb,
+    0x4f040d56, 0x4bc510e1, 0x46863638, 0x42472b8f, 0x5c007b8a, 0x58c1663d, 0x558240e4, 0x51435d53,
+    0x251d3b9e, 0x21dc2629, 0x2c9f00f0, 0x285e1d47, 0x36194d42, 0x32d850f5, 0x3f9b762c, 0x3b5a6b9b,
+    0x0315d626, 0x07d4cb91, 0x0a97ed48, 0x0e56f0ff, 0x1011a0fa, 0x14d0bd4d, 0x19939b94, 0x1d528623,
+    0xf12f560e, 0xf5ee4bb9, 0xf8ad6d60, 0xfc6c70d7, 0xe22b20d2, 0xe6ea3d65, 0xeba91bbc, 0xef68060b,
+    0xd727bbb6, 0xd3e6a601, 0xdea580d8, 0xda649d6f, 0xc423cd6a, 0xc0e2d0dd, 0xcda1f604, 0xc960ebb3,
+    0xbd3e8d7e, 0xb9ff90c9, 0xb4bcb610, 0xb07daba7, 0xae3afba2, 0xaafbe615, 0xa7b8c0cc, 0xa379dd7b,
+    0x9b3660c6, 0x9ff77d71, 0x92b45ba8, 0x9675461f, 0x8832161a, 0x8cf30bad, 0x81b02d74, 0x857130c3,
+    0x5d8a9099, 0x594b8d2e, 0x5408abf7, 0x50c9b640, 0x4e8ee645, 0x4a4ffbf2, 0x470cdd2b, 0x43cdc09c,
+    0x7b827d21, 0x7f436096, 0x7200464f, 0x76c15bf8, 0x68860bfd, 0x6c47164a, 0x61043093, 0x65c52d24,
+    0x119b4be9, 0x155a565e, 0x18197087, 0x1cd86d30, 0x029f3d35, 0x065e2082, 0x0b1d065b, 0x0fdc1bec,
+    0x3793a651, 0x3352bbe6, 0x3e119d3f, 0x3ad08088, 0x2497d08d, 0x2056cd3a, 0x2d15ebe3, 0x29d4f654,
+    0xc5a92679, 0xc1683bce, 0xcc2b1d17, 0xc8ea00a0, 0xd6ad50a5, 0xd26c4d12, 0xdf2f6bcb, 0xdbee767c,
+    0xe3a1cbc1, 0xe760d676, 0xea23f0af, 0xeee2ed18, 0xf0a5bd1d, 0xf464a0aa, 0xf9278673, 0xfde69bc4,
+    0x89b8fd09, 0x8d79e0be, 0x803ac667, 0x84fbdbd0, 0x9abc8bd5, 0x9e7d9662, 0x933eb0bb, 0x97ffad0c,
+    0xafb010b1, 0xab710d06, 0xa6322bdf, 0xa2f33668, 0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4,
 };
 uint32 xUtil_crc_update(uint32 crc_accum, char* data, int datasize)
 {
     int i, j;
-    
+
     for (i = 0; i < datasize; i++)
     {
         j = ((crc_accum >> 24) ^ *data++) & 0xff;
         crc_accum = (crc_accum << 8) ^ g_crc32_table[j];
     }
-    
+
     return crc_accum;
 }
 
@@ -244,7 +244,7 @@ typedef struct {
     bfbb_save_file_block_header header;
     union {
         unsigned char raw_bytes[512 - sizeof(bfbb_save_file_block_header)]; // NOTE(jelly): padding to 1/2 KiB
-        
+
         bfbb_save_file_block_gdat gdat;
         bfbb_save_file_block_ledr ledr;
         bfbb_save_file_block_room room;
@@ -305,7 +305,7 @@ typedef struct {
 
 void byteswap32(uint32 *p) {
     uint32 n = *p;
-    *p = (((n &       0xff) << 24) | 
+    *p = (((n &       0xff) << 24) |
           ((n &     0xff00) <<  8) |
           ((n &   0xff0000) >>  8) |
           ((n & 0xff000000) >> 24));
@@ -386,7 +386,7 @@ int bfbb_save_file_block_read(buffer *b, bfbb_save_file_block *new_block, int is
     if (bfbb_save_file_looks_like_a_valid_header(&header)) {
         int is_gdat = header.id == FOURCC_GDAT;
         int actual_block_size = is_gdat ? 4 : header.block_size;
-        int actual_bytes_used = is_gdat ? 4 : header.bytes_used; 
+        int actual_bytes_used = is_gdat ? 4 : header.bytes_used;
         unsigned char *bytes;
         if (header.id == FOURCC_SFIL) return 0;
         bytes = eat_bytes(b, actual_block_size);
@@ -450,7 +450,7 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
         {
             b.cond.base_enable = (u8)bit_eat(br, 1);
             break;
-        }        
+        }
         case BASE_TYPE_TELEPORTBOX:
         {
             b.tpbox.base_enable = (u8)bit_eat(br, 1);
@@ -473,7 +473,7 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
         {
             b.camfly.base_enable = (u8)bit_eat(br, 1);
             break;
-        }          
+        }
         default:
         {
             printf("Unknown base type %d\n", p[1]);
@@ -502,13 +502,13 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 p.spats = bit_eat_s32(&br);
                 p.has_bubble_bowl = bit_eat(&br, 8);
                 p.has_cruise_bubble = bit_eat(&br, 8);
-                
+
                 for(int i = 0; i<LEVEL_COUNT; i++)
                 {
                     p.level_collectables[i].socks = bit_eat_s32(&br);
                     p.level_collectables[i].pickups = bit_eat_s32(&br);
                 }
-                
+
                 p.total_socks = bit_eat_s32(&br);
                 for(int i = 0; i<14; i++)
                 {
@@ -618,14 +618,14 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
     bfbb_save_file_block gdat;
     int rc;
     int i = 0;
-    
+
     if (is_gci) {
         eat_bytes(&b, 0x5880); // NOTE(jelly): gci file header
-        
+
         eat_bytes(&b, 512); // NOTE(jelly): zeros
         magic_string = (char *)eat_bytes(&b, sizeof(BFBB_SAVE_FILE_MAGIC_STRING) - 1);
         eat_bytes(&b, 0x599); // NOTE(jelly): zeros - wiki says 599 (decimal); i assume this is a typo
-        
+
         /*
         if (strcmp(magic_string, BFBB_SAVE_FILE_MAGIC_STRING)) {
             // assert(0);
@@ -633,23 +633,23 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
         }
 */
     }
-    
+
     rc = bfbb_save_file_block_read(&b, &gdat, is_gci);
     if (rc < 1) return 0;
     result->original_file_size = gdat.header.bytes_used;
     result->original_crc32_checksum = gdat.gdat.crc32_checksum;
-    
+
     while (rc = bfbb_save_file_block_read(&b, &result->blocks[i++], is_gci)) {
         if (rc < 0) {
             result->block_count = 0;
             return 0;
         }
     }
-    
+
     result->block_count = i-1;
-    
+
     bfbb_save_file_read_bit_blocks(result);
-    
+
     return 1;
 }
 
@@ -665,7 +665,7 @@ void bfbb_save_file_set_gdat_block(bfbb_save_file_block *block, int file_size, u
     block->header.block_size = 1;
     block->header.bytes_used = file_size;
     block->gdat.crc32_checksum = crc32_checksum;
-    
+
     if (is_gci) {
         byteswap32(&block->header.id);
         byteswap32((uint32 *)&block->header.block_size);
@@ -790,6 +790,16 @@ void bfbb_save_file_write_scene_block_stuff(bit_writer *bw, bfbb_save_file_block
     bit_push(bw, block->scene.offsety, 32);
 }
 
+void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32 *table) {
+    bfbb_save_file_write_scene_block_stuff(bw, block); // TODO(jelly): name this better for godsake
+    for (int i =0; i < arrlen(block->scene.base); i++) {
+        bfbb_save_file_write_scene_block(bw, table, i, block);
+    }
+    b->size += block->header.bytes_used;
+}
+
+#define CaseScene(bw, block, fourcc) case FOURCC_##fourcc:b bfbb_save_file_write_scene(bw, block, fourcc_##table); break;
+
 bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_file_block *block, int is_gci) {
     int is_gdat = block->header.id == FOURCC_GDAT;
     //int is_cumd = block->header.id == FOURCC_CONST('C', 'U', 'M', 'D');
@@ -808,7 +818,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     }
     */
     bfbb_save_file_block *result = 0;
-    
+
     if (is_gci) {
         bfbb_save_file_block_byteswap(block);
         // NOTE(jelly): we need to byteswap the id AFTER because
@@ -819,7 +829,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     }
     result = (bfbb_save_file_block *)(b->bytes + b ->size);
     write_bytes(b, (unsigned char *)&block->header, sizeof(block->header));
-    
+
     {
         bit_writer bw = {b->max_size - b->size, b->bytes + b->size};
         switch (block->header.id) {
@@ -843,59 +853,16 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 }
                 b->size+=size_to_write;
             } break;
-            case FOURCC_HB01: {
-                bfbb_save_file_write_scene_block_stuff(&bw, block);
-                for(int j = 0; j<arrlen(block->scene.base); j++)
-                {
-                    bfbb_save_file_write_scene_block(&bw, (u32*)HB01_table, j, block);
-                }
-                printf("%d", bw.at);
-                b->size+=size_to_write;
-            } break;
-            case FOURCC_HB02: {
-                bfbb_save_file_write_scene_block_stuff(&bw, block);
-                for(int j = 0; j<arrlen(block->scene.base); j++)
-                {
-                    bfbb_save_file_write_scene_block(&bw, (u32*)HB02_table, j, block);
-                }
-                b->size+=size_to_write;
-            } break;
-            case FOURCC_JF01: {
-                bfbb_save_file_write_scene_block_stuff(&bw, block);
-                for(int j = 0; j<arrlen(block->scene.base); j++)
-                {
-                    bfbb_save_file_write_scene_block(&bw, (u32*)JF01_table, j, block);
-                }
-                b->size+=size_to_write;
-            } break;
-            case FOURCC_JF02: {
-                bfbb_save_file_write_scene_block_stuff(&bw, block);
-                for(int j = 0; j<arrlen(block->scene.base); j++)
-                {
-                    bfbb_save_file_write_scene_block(&bw, (u32*)JF02_table, j, block);
-                }
-                b->size+=size_to_write;
-            } break;
-            case FOURCC_JF03: {
-                bfbb_save_file_write_scene_block_stuff(&bw, block);
-                for(int j = 0; j<arrlen(block->scene.base); j++)
-                {
-                    bfbb_save_file_write_scene_block(&bw, (u32*)JF03_table, j, block);
-                }
-                b->size+=size_to_write;
-            } break;
-            case FOURCC_JF04: {
-                bfbb_save_file_write_scene_block_stuff(&bw, block);
-                for(int j = 0; j<arrlen(block->scene.base); j++)
-                {
-                    bfbb_save_file_write_scene_block(&bw, (u32*)JF04_table, j, block);
-                }
-                b->size+=size_to_write;
-            } break;
+            CaseScene(&bw, block, HB01);
+            CaseScene(&bw, block, HB02);
+            CaseScene(&bw, block, JF01);
+            CaseScene(&bw, block, JF02);
+            CaseScene(&bw, block, JF03);
+            CaseScene(&bw, block, JF04);
             default: write_bytes(b, block->raw_bytes, size_to_write);
         }
     }
-    
+
     bfbb_save_file_append_padding(b, padding_size);
     return result;
 }
@@ -905,7 +872,7 @@ void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
     //TODO(Will): Figure out how to actually fucking do this :)
     uint32 sfil_size = size_of_data - b->size - 12;
     uint32 sfil_bytes_used = 8;
-    
+
     if (is_gci) {
         unsigned char sfil_id[] = {
             0x53, 0x46, 0x49, 0x4C
@@ -924,7 +891,7 @@ void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
         byteswap32(&sfil_size);
     write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
     write_bytes(b, (unsigned char *)"RyanNeil", 8);
-    
+
     bfbb_save_file_append_padding(b, sfil_size - 8);
 }
 
@@ -935,14 +902,14 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
     uint32 checksum;
     bfbb_save_file_block dummy_gdat, *gdat;
     int bytes_written_out = 0;
-    
+
     memset(static_buffer, 0, sizeof(static_buffer)); // NOTE(jelly): in case we write out multiple files, i want this buffer clear.
-    
+
     if (is_gci) {
         const int GCI_EPOCH = 946702799;
         uint32 *date_address = (uint32*)(static_buffer + 0x28);
         uint32 date = (uint32)time(0) - GCI_EPOCH;
-        
+
         byteswap32(&date);
         write_bytes(&b, (unsigned char *)bfbb_gci_header, sizeof(bfbb_gci_header));
         *date_address = date;
@@ -950,27 +917,27 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
         write_bytes(&b, (unsigned char *)BFBB_SAVE_FILE_MAGIC_STRING, sizeof(BFBB_SAVE_FILE_MAGIC_STRING)-1);
         write_byte_n_times(&b, 0, 0x599);
     }
-    
+
     bfbb_save_file_make_dummy_gdat_block(&dummy_gdat);
     gdat = bfbb_save_file_append_block(&b, &dummy_gdat, is_gci);
     for (i = 0; i < save_file->block_count; i++) {
         bfbb_save_file_append_block(&b, &save_file->blocks[i], is_gci);
     }
-    
+
     bfbb_save_file_append_sfil(&b, is_gci);
-    
+
     file_size = b.size - ((unsigned char *)gdat - static_buffer);
     checksum = crc32_get_checksum((char *)gdat + 16, file_size - 16);
-    
+
     bfbb_save_file_set_gdat_block(gdat, file_size, checksum, is_gci);
-    
+
     if (is_gci) {
         write_byte_n_times(&b, 0, 0x14040 - b.size);
     } else {
         sha1_hash160 xbox_sig = bfbb_hmac_sha1(b.bytes, b.size);
         write_bytes(&b, xbox_sig.hash, 20);
     }
-    
+
     {
         FILE *out = fopen(path, "wb");
         if (out) {
@@ -978,7 +945,7 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
             fclose(out);
         } else return 0;
     }
-    
+
     return bytes_written_out == b.size;
 }
 
