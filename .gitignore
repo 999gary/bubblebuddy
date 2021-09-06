@@ -2,6 +2,7 @@ build/*
 .vs/*
 .vscode/*
 himt
+*.bak
 *.xsv
 *.exe
 *.pdb
