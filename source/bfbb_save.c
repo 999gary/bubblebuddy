@@ -192,6 +192,7 @@ typedef struct {
     u8 base_enable;
     u8 show_ent;
     u8 opened;
+    u32 player_state;
 } base_type_teleportbox;
 
 typedef struct {
@@ -455,6 +456,7 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
             b.tpbox.base_enable = (u8)bit_eat(br, 1);
             b.tpbox.show_ent = (u8)bit_eat(br, 1);
             b.tpbox.opened = (u8)bit_eat(br, 1);
+            b.tpbox.player_state = (u32)bit_eat(br, 32);
             break;
         }
         case BASE_TYPE_TASKBOX:
@@ -755,6 +757,7 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
             bit_push(b, bt.tpbox.base_enable, 1);
             bit_push(b, bt.tpbox.show_ent, 1);
             bit_push(b, bt.tpbox.opened, 1);
+            bit_push(b, bt.tpbox.player_state, 32);
             break;
         }
         case BASE_TYPE_TASKBOX:
@@ -787,7 +790,7 @@ void bfbb_save_file_write_scene_block_stuff(bit_writer *bw, bfbb_save_file_block
     bit_push(bw, block->scene.offsety, 32);
 }
 
-void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32 *table) {
+void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32 *table, write_buffer *b) {
     bfbb_save_file_write_scene_block_stuff(bw, block); // TODO(jelly): name this better for godsake
     for (int i =0; i < arrlen(block->scene.base); i++) {
         bfbb_save_file_write_scene_block(bw, table, i, block);
@@ -795,7 +798,7 @@ void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32
     b->size += block->header.bytes_used;
 }
 
-#define CaseScene(bw, block, fourcc) case FOURCC_##fourcc:b bfbb_save_file_write_scene(bw, block, fourcc_##table); break;
+#define CaseScene(bw, block, fourcc) case FOURCC_##fourcc: bfbb_save_file_write_scene(bw, block, (u32*)fourcc##_table, b); break;
 
 bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_file_block *block, int is_gci) {
     int is_gdat = block->header.id == FOURCC_GDAT;
