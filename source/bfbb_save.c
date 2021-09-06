@@ -1083,6 +1083,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                     bit_push_s32(&bw, block->plyr.cutscene_played[i]);
                 }
                 bit_push(&bw, block->plyr.idiot_levels, 6);
+                if (is_gci) byteswap32_n(b->bytes+b->size, block->header.bytes_used);
                 b->size+=size_to_write;
             } break;
             CaseSceneWrite(&bw, block, b, is_gci, JF01);
@@ -1154,6 +1155,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 }
                 bit_push(&bw, block->cntr.reminder_sock_cntr, 16);
                 bit_push_s32(&bw, block->cntr.cheats);
+                if (is_gci) byteswap32_n(b->bytes+b->size, block->header.bytes_used);
                 b->size+=size_to_write;
                 break;
             }
