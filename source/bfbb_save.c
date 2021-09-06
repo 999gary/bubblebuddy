@@ -21,20 +21,7 @@ typedef  int32_t  int32;
 
 #include "bfbb_gci_header.h"
 #include "hmac_sha1.c"
-#include "scenedata/hb01.h"
-#include "scenedata/hb02.h"
-/*#include "scenedata/hb03.h"
-#include "scenedata/hb04.h"
-#include "scenedata/hb05.h"
-#include "scenedata/hb06.h"
-#include "scenedata/hb07.h"
-#include "scenedata/hb08.h"
-#include "scenedata/hb09.h"
-//#include "scenedata/hb10.h"*/
-#include "scenedata/jf01.h"
-#include "scenedata/jf02.h"
-#include "scenedata/jf03.h"
-#include "scenedata/jf04.h"
+#include "scenedata/all.h"
 
 // NOTE(jelly): this code (and table) is based off of the crc32 code from the decomp
 //              https://github.com/bfbbdecomp/bfbb/blob/2bc99a1efcb8fab4cbccfc416d226f4a54b851ab/src/Core/x/xutil.cpp
