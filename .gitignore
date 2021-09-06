@@ -1,5 +1,8 @@
 build/*
 .vs/*
+.vscode/*
+himt
+*.xsv
 *.exe
 *.pdb
 *.lnk
