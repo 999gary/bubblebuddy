@@ -483,17 +483,38 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
     return b;
 }
 
+int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_save_file_block *block, u32 *table, int table_count) {
+    // NOTE(jelly): declaring a scene like this before writing to block->scene MUST be done because block->scene is a union
+    //              and reading from scene while writing to it will be broken.
+    bfbb_save_file_block_scene scene = {0};
+    scene.visited = bit_eat(br, 1);
+    scene.offsetx = bit_eat_float(br);
+    scene.offsety = bit_eat_float(br);
+    for (int i = 0; i < table_count; i++) {
+        arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, br, table));
+    }
+    block->scene = scene;
+    return 1; // TODO(jelly): more checks??
+}
+
+#define CaseSceneTableName(fourcc) fourcc##_table
+#define CaseSceneRead(sf,br,bl,fourcc) \
+    case FOURCC_##fourcc: \
+    bfbb_save_file_read_scene(sf, br, bl, (u32 *)CaseSceneTableName(fourcc), ArrayCount(CaseSceneTableName(fourcc)));\
+    break;
+
 int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
 {
     for(int i = 0; i<save_file->block_count; i++)
     {
         bfbb_save_file_block* block = &save_file->blocks[i];
+        bit_buffer b = {block->header.bytes_used, block->raw_bytes};
+        bit_reader br = {b};
         switch(block->header.id)
         {
             case(FOURCC_PLYR):
             {
-                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
-                bit_reader br = {b};
+
                 bfbb_save_file_block_plyr p = {0};
                 bit_eat(&br, 1);
                 p.max_health = bit_eat_s32(&br);
@@ -518,99 +539,16 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 block->plyr = p;
                 break;
             }
-            case(FOURCC_HB01):
-            {
-                bfbb_save_file_block_scene scene = {0};
-                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
-                bit_reader br = {b};
-                scene.visited = (u8)bit_eat(&br, 1);
-                scene.offsetx = bit_eat_float(&br);
-                scene.offsety = bit_eat_float(&br);
-                for(int i = 0; i<ArrayCount(HB01_table); i++)
-                {
-                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)HB01_table));
-                }
-                printf("%d", (s32)br.at_bit/8);
-                block->scene = scene;
-                break;
-            }
-            case(FOURCC_HB02):
-            {
-                bfbb_save_file_block_scene scene = {0};
-                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
-                bit_reader br = {b};
-                scene.visited = (u8)bit_eat(&br, 1);
-                scene.offsetx = bit_eat_float(&br);
-                scene.offsety = bit_eat_float(&br);
-                for(int i = 0; i<ArrayCount(HB02_table); i++)
-                {
-                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)HB02_table));
-                }
-                block->scene = scene;
-                break;
-            }
-            case(FOURCC_JF01):
-            {
-                bfbb_save_file_block_scene scene = {0};
-                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
-                bit_reader br = {b};
-                scene.visited = (u8)bit_eat(&br, 1);
-                scene.offsetx = bit_eat_float(&br);
-                scene.offsety = bit_eat_float(&br);
-                for(int i = 0; i<ArrayCount(JF01_table); i++)
-                {
-                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF01_table));
-                }
-                block->scene = scene;
-                break;
-            }
-            case(FOURCC_JF02):
-            {
-                bfbb_save_file_block_scene scene = {0};
-                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
-                bit_reader br = {b};
-                scene.visited = (u8)bit_eat(&br, 1);
-                scene.offsetx = bit_eat_float(&br);
-                scene.offsety = bit_eat_float(&br);
-                for(int i = 0; i<ArrayCount(JF02_table); i++)
-                {
-                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF02_table));
-                }
-                block->scene = scene;
-                break;
-            }
-            case(FOURCC_JF03):
-            {
-                bfbb_save_file_block_scene scene = {0};
-                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
-                bit_reader br = {b};
-                scene.visited = (u8)bit_eat(&br, 1);
-                scene.offsetx = bit_eat_float(&br);
-                scene.offsety = bit_eat_float(&br);
-                for(int i = 0; i<ArrayCount(JF03_table); i++)
-                {
-                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF03_table));
-                }
-                block->scene = scene;
-                break;
-            }
-            case(FOURCC_JF04):
-            {
-                bfbb_save_file_block_scene scene = {0};
-                bit_buffer b = {block->header.bytes_used, block->raw_bytes};
-                bit_reader br = {b};
-                scene.visited = (u8)bit_eat(&br, 1);
-                scene.offsetx = bit_eat_float(&br);
-                scene.offsety = bit_eat_float(&br);
-                for(int i = 0; i<ArrayCount(JF04_table); i++)
-                {
-                    arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF04_table));
-                }
-                block->scene = scene;
-                break;
-            }
+            CaseSceneRead(save_file, &br, block, HB01);
+            CaseSceneRead(save_file, &br, block, HB02);
+            CaseSceneRead(save_file, &br, block, JF01);
+            CaseSceneRead(save_file, &br, block, JF02);
+            CaseSceneRead(save_file, &br, block, JF03);
+            CaseSceneRead(save_file, &br, block, JF04);
         }
     }
+    // TODO(jelly): do more checks??
+    return 1;
 }
 
 int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size, int is_gci) {
@@ -799,7 +737,7 @@ void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32
     b->size += block->header.bytes_used;
 }
 
-#define CaseScene(bw, block, fourcc) case FOURCC_##fourcc: bfbb_save_file_write_scene(bw, block, (u32*)fourcc##_table, b); break;
+#define CaseSceneWrite(bw, block, b, fourcc) case FOURCC_##fourcc: bfbb_save_file_write_scene(bw, block, (u32*)fourcc##_table, b); break;
 
 bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_file_block *block, int is_gci) {
     int is_gdat = block->header.id == FOURCC_GDAT;
@@ -855,12 +793,12 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 bit_push(&bw, block->plyr.idiot_levels, 6);
                 b->size+=size_to_write;
             } break;
-            CaseScene(&bw, block, HB01);
-            CaseScene(&bw, block, HB02);
-            CaseScene(&bw, block, JF01);
-            CaseScene(&bw, block, JF02);
-            CaseScene(&bw, block, JF03);
-            CaseScene(&bw, block, JF04);
+            CaseSceneWrite(&bw, block, b, HB01);
+            CaseSceneWrite(&bw, block, b, HB02);
+            CaseSceneWrite(&bw, block, b, JF01);
+            CaseSceneWrite(&bw, block, b, JF02);
+            CaseSceneWrite(&bw, block, b, JF03);
+            CaseSceneWrite(&bw, block, b, JF04);
             default: write_bytes(b, block->raw_bytes, size_to_write);
         }
     }
