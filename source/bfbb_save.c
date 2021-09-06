@@ -425,10 +425,8 @@ void byteswap32(u32 *p) {
 
 void byteswap32_n(u8 *data, int count) {
     assert(count % 4 ==0);
-    u32 *data32 = (u32 *)data;
-    count /= 4;
-    for (int i = 0; i < count; i++) {
-        byteswap32(&data32[i]);
+    for (int i = 0; i < count; i += 4) {
+        byteswap32((u32 *)&data[i]);
     }
 }
 
@@ -486,7 +484,8 @@ void bfbb_save_file_block_byteswap(bfbb_save_file_block *new_block) {
             byteswap32((u32 *)&new_block->ledr.thumbnail_index);
         } break;
         case FOURCC_ROOM: {
-            byteswap32(&new_block->room.sceneid);
+            // NOTE(jelly): this does NOT get byteswapped!
+            //byteswap32(&new_block->room.sceneid);
         } break;
         case FOURCC_PREF: {
             byteswap32(&new_block->pref.sound_mode);
