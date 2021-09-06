@@ -14,7 +14,8 @@ int main(int argc, char **argv) {
         if (u) {
             for (char *c = line; *c; c++) *c = toupper(*c);
         }
-        printf(argv[1], line);
+        
+        printf(argv[1], line[0], line[1], line[2], line[3], line[0], line[1], line[2], line[3]);
         printf("\n");
     }
 }

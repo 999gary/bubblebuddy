@@ -78,12 +78,17 @@ uint32 crc32_get_checksum(char *data, int size) {
 
 #define BASE_TYPE_TRIGGER 1
 #define BASE_TYPE_PICKUP 4
+#define BASE_TYPE_PLATFORM 6
+#define BASE_TYPE_STATIC 11
 #define BASE_TYPE_TIMER 14
 #define BASE_TYPE_PORTAL 16
+#define BASE_TYPE_GROUP 17
 #define BASE_TYPE_SFX 19
 #define BASE_TYPE_COUNTER 22
+#define BASE_TYPE_BUTTON 24
 #define BASE_TYPE_DISPATCHER 30
 #define BASE_TYPE_COND 31
+#define BASE_TYPE_CUTSCENEMGR 40
 #define BASE_TYPE_TELEPORTBOX 49
 #define BASE_TYPE_TASKBOX 53
 #define BASE_TYPE_TAXI 57
@@ -120,6 +125,13 @@ typedef struct {
 } bfbb_save_file_block_svid;
 
 typedef struct {
+    s16 spats[15][8];
+    s16 robot_data[15];
+    s16 reminder_sock_cntr;
+    s32 cheats;
+} bfbb_save_file_block_cntr;
+
+typedef struct {
     int32 socks;
     int32 pickups;
 } bfbb_save_file_level_collectables;
@@ -152,9 +164,23 @@ typedef struct {
 
 typedef struct {
     u8 base_enable;
+    u8 show_ent;
+} base_type_platform;
+
+typedef struct {
+    u8 base_enable;
+    u8 show_ent;
+} base_type_static;
+
+typedef struct {
+    u8 base_enable;
     u8 state;
     f32 seconds_left;
 } base_type_timer;
+
+typedef struct {
+    u8 base_enable;
+} base_type_group;
 
 typedef struct {
     u8 base_enable;
@@ -165,6 +191,13 @@ typedef struct {
     s16 count;
     u8 state;
 } base_type_counter;
+
+typedef struct {
+    u8 base_enable;
+    u8 show_ent;
+    u8 unknown_bit1;
+    u8 unknown_bit2;
+} base_type_button;
 
 //wtf does this do
 typedef struct {
@@ -199,9 +232,13 @@ typedef struct {
   union {
     base_type_trigger trigger;
     base_type_pickup pickup;
+    base_type_platform platform;
+    base_type_static staticc;
     base_type_timer timer;
+    base_type_group group;
     base_type_sfx sfx;
     base_type_counter counter;
+    base_type_button button;
     base_type_dispatcher dispatcher;
     base_type_cond cond;
     base_type_teleportbox tpbox;
@@ -238,6 +275,7 @@ typedef struct {
         bfbb_save_file_block_pref pref;
         bfbb_save_file_block_svid svid;
         bfbb_save_file_block_plyr plyr;
+        bfbb_save_file_block_cntr cntr;
         bfbb_save_file_block_scene scene;
     };
 } bfbb_save_file_block;
@@ -269,6 +307,49 @@ typedef struct {
 #define FOURCC_LEDR FOURCC_CONST('L', 'E', 'D', 'R')
 #define FOURCC_ROOM FOURCC_CONST('R', 'O', 'O', 'M')
 #define FOURCC_PLYR FOURCC_CONST('P', 'L', 'Y', 'R')
+
+#define FOURCC_JF01 FOURCC_CONST('J', 'F', '0', '1')
+#define FOURCC_JF02 FOURCC_CONST('J', 'F', '0', '2')
+#define FOURCC_JF03 FOURCC_CONST('J', 'F', '0', '3')
+#define FOURCC_JF04 FOURCC_CONST('J', 'F', '0', '4')
+#define FOURCC_KF01 FOURCC_CONST('K', 'F', '0', '1')
+#define FOURCC_KF02 FOURCC_CONST('K', 'F', '0', '2')
+#define FOURCC_KF04 FOURCC_CONST('K', 'F', '0', '4')
+#define FOURCC_KF05 FOURCC_CONST('K', 'F', '0', '5')
+#define FOURCC_MNU3 FOURCC_CONST('M', 'N', 'U', '3')
+#define FOURCC_RB01 FOURCC_CONST('R', 'B', '0', '1')
+#define FOURCC_RB02 FOURCC_CONST('R', 'B', '0', '2')
+#define FOURCC_RB03 FOURCC_CONST('R', 'B', '0', '3')
+#define FOURCC_SM01 FOURCC_CONST('S', 'M', '0', '1')
+#define FOURCC_SM02 FOURCC_CONST('S', 'M', '0', '2')
+#define FOURCC_SM03 FOURCC_CONST('S', 'M', '0', '3')
+#define FOURCC_SM04 FOURCC_CONST('S', 'M', '0', '4')
+#define FOURCC_B101 FOURCC_CONST('B', '1', '0', '1')
+#define FOURCC_B201 FOURCC_CONST('B', '2', '0', '1')
+#define FOURCC_B302 FOURCC_CONST('B', '3', '0', '2')
+#define FOURCC_B303 FOURCC_CONST('B', '3', '0', '3')
+#define FOURCC_BB01 FOURCC_CONST('B', 'B', '0', '1')
+#define FOURCC_BB02 FOURCC_CONST('B', 'B', '0', '2')
+#define FOURCC_BB03 FOURCC_CONST('B', 'B', '0', '3')
+#define FOURCC_BB04 FOURCC_CONST('B', 'B', '0', '4')
+#define FOURCC_BC01 FOURCC_CONST('B', 'C', '0', '1')
+#define FOURCC_BC02 FOURCC_CONST('B', 'C', '0', '2')
+#define FOURCC_BC03 FOURCC_CONST('B', 'C', '0', '3')
+#define FOURCC_BC04 FOURCC_CONST('B', 'C', '0', '4')
+#define FOURCC_BC05 FOURCC_CONST('B', 'C', '0', '5')
+#define FOURCC_DB01 FOURCC_CONST('D', 'B', '0', '1')
+#define FOURCC_DB02 FOURCC_CONST('D', 'B', '0', '2')
+#define FOURCC_DB03 FOURCC_CONST('D', 'B', '0', '3')
+#define FOURCC_DB04 FOURCC_CONST('D', 'B', '0', '4')
+#define FOURCC_DB06 FOURCC_CONST('D', 'B', '0', '6')
+#define FOURCC_GL01 FOURCC_CONST('G', 'L', '0', '1')
+#define FOURCC_GL02 FOURCC_CONST('G', 'L', '0', '2')
+#define FOURCC_GL03 FOURCC_CONST('G', 'L', '0', '3')
+#define FOURCC_GY01 FOURCC_CONST('G', 'Y', '0', '1')
+#define FOURCC_GY02 FOURCC_CONST('G', 'Y', '0', '2')
+#define FOURCC_GY03 FOURCC_CONST('G', 'Y', '0', '3')
+#define FOURCC_GY04 FOURCC_CONST('G', 'Y', '0', '4')
+#define FOURCC_HB00 FOURCC_CONST('H', 'B', '0', '0')
 #define FOURCC_HB01 FOURCC_CONST('H', 'B', '0', '1')
 #define FOURCC_HB02 FOURCC_CONST('H', 'B', '0', '2')
 #define FOURCC_HB03 FOURCC_CONST('H', 'B', '0', '3')
@@ -279,10 +360,9 @@ typedef struct {
 #define FOURCC_HB08 FOURCC_CONST('H', 'B', '0', '8')
 #define FOURCC_HB09 FOURCC_CONST('H', 'B', '0', '9')
 #define FOURCC_HB10 FOURCC_CONST('H', 'B', '1', '0')
-#define FOURCC_JF01 FOURCC_CONST('J', 'F', '0', '1')
-#define FOURCC_JF02 FOURCC_CONST('J', 'F', '0', '2')
-#define FOURCC_JF03 FOURCC_CONST('J', 'F', '0', '3')
-#define FOURCC_JF04 FOURCC_CONST('J', 'F', '0', '4')
+#define FOURCC_PG12 FOURCC_CONST('P', 'G', '1', '2')
+
+#define FOURCC_CNTR FOURCC_CONST('C', 'N', 'T', 'R')
 #define FOURCC_PREF FOURCC_CONST('P', 'R', 'E', 'F')
 #define FOURCC_SVID FOURCC_CONST('S', 'V', 'I', 'D')
 #define FOURCC_SFIL FOURCC_CONST('S', 'F', 'I', 'L')
@@ -409,11 +489,28 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
             //u8 enthidden = state & 0x4;
             break;
         }
+        case BASE_TYPE_PLATFORM:
+        {
+            b.platform.base_enable = (u8)bit_eat(br, 1);
+            b.platform.show_ent = (u8)bit_eat(br, 1);
+            break;
+        }
+        case BASE_TYPE_STATIC:
+        {
+            b.staticc.base_enable = (u8)bit_eat(br, 1);
+            b.staticc.show_ent = (u8)bit_eat(br, 1);
+            break;
+        }
         case BASE_TYPE_TIMER:
         {
             b.timer.base_enable = (u8)bit_eat(br, 1);
             b.timer.state = (u8)bit_eat(br, 8);
             b.timer.seconds_left = bit_eat_float(br);
+            break;
+        }
+        case BASE_TYPE_GROUP:
+        {
+            b.group.base_enable = (u8)bit_eat(br, 1);
             break;
         }
         case BASE_TYPE_SFX:
@@ -424,8 +521,16 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
         case BASE_TYPE_COUNTER:
         {
             b.counter.base_enable = (u8)bit_eat(br, 1);
-            b.counter.count = (s16)bit_eat(br, 16);
             b.counter.state = (u8)bit_eat(br, 8);
+            b.counter.count = (s16)bit_eat(br, 16); 
+            break;
+        }
+        case BASE_TYPE_BUTTON:
+        {
+            b.button.base_enable = (u8)bit_eat(br, 1);
+            b.button.show_ent = (u8)bit_eat(br, 1);
+            b.button.unknown_bit1 = (u8)bit_eat(br, 1);
+            b.button.unknown_bit2 = (u8)bit_eat(br, 1);
             break;
         }
         case BASE_TYPE_DISPATCHER:
@@ -461,6 +566,11 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
             b.camfly.base_enable = (u8)bit_eat(br, 1);
             break;
         }
+        case BASE_TYPE_CUTSCENEMGR:
+        {
+            //NOTE(Will): It does nothing?
+            break;
+        }
         default:
         {
             printf("Unknown base type %d\n", p[1]);
@@ -489,6 +599,10 @@ int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_sa
     case FOURCC_##fourcc: \
     bfbb_save_file_read_scene(sf, br, bl, (u32 *)CaseSceneTableName(fourcc), ArrayCount(CaseSceneTableName(fourcc)));\
     break;
+
+const u8 spat_count_per_world[] = {
+    8,8,8,8,1,8,8,8,1,8,8,8,2,8,8
+};
 
 int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
 {
@@ -526,12 +640,101 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 block->plyr = p;
                 break;
             }
-            CaseSceneRead(save_file, &br, block, HB01);
-            CaseSceneRead(save_file, &br, block, HB02);
             CaseSceneRead(save_file, &br, block, JF01);
             CaseSceneRead(save_file, &br, block, JF02);
             CaseSceneRead(save_file, &br, block, JF03);
             CaseSceneRead(save_file, &br, block, JF04);
+            CaseSceneRead(save_file, &br, block, KF01);
+            CaseSceneRead(save_file, &br, block, KF02);
+            CaseSceneRead(save_file, &br, block, KF04);
+            CaseSceneRead(save_file, &br, block, KF05);
+            CaseSceneRead(save_file, &br, block, MNU3);
+            CaseSceneRead(save_file, &br, block, RB01);
+            CaseSceneRead(save_file, &br, block, RB02);
+            CaseSceneRead(save_file, &br, block, RB03);
+            CaseSceneRead(save_file, &br, block, SM01);
+            CaseSceneRead(save_file, &br, block, SM02);
+            CaseSceneRead(save_file, &br, block, SM03);
+            CaseSceneRead(save_file, &br, block, SM04);
+            CaseSceneRead(save_file, &br, block, B101);
+            CaseSceneRead(save_file, &br, block, B201);
+            CaseSceneRead(save_file, &br, block, B302);
+            CaseSceneRead(save_file, &br, block, B303);
+            CaseSceneRead(save_file, &br, block, BB01);
+            CaseSceneRead(save_file, &br, block, BB02);
+            CaseSceneRead(save_file, &br, block, BB03);
+            CaseSceneRead(save_file, &br, block, BB04);
+            CaseSceneRead(save_file, &br, block, BC01);
+            CaseSceneRead(save_file, &br, block, BC02);
+            CaseSceneRead(save_file, &br, block, BC03);
+            CaseSceneRead(save_file, &br, block, BC04);
+            CaseSceneRead(save_file, &br, block, BC05);
+            CaseSceneRead(save_file, &br, block, DB01);
+            CaseSceneRead(save_file, &br, block, DB02);
+            CaseSceneRead(save_file, &br, block, DB03);
+            CaseSceneRead(save_file, &br, block, DB04);
+            CaseSceneRead(save_file, &br, block, DB06);
+            CaseSceneRead(save_file, &br, block, GL01);
+            CaseSceneRead(save_file, &br, block, GL02);
+            CaseSceneRead(save_file, &br, block, GL03);
+            CaseSceneRead(save_file, &br, block, GY01);
+            CaseSceneRead(save_file, &br, block, GY02);
+            CaseSceneRead(save_file, &br, block, GY03);
+            CaseSceneRead(save_file, &br, block, GY04);
+            CaseSceneRead(save_file, &br, block, HB00);
+            CaseSceneRead(save_file, &br, block, HB01);
+            CaseSceneRead(save_file, &br, block, HB02);
+            CaseSceneRead(save_file, &br, block, HB03);
+            CaseSceneRead(save_file, &br, block, HB04);
+            CaseSceneRead(save_file, &br, block, HB05);
+            CaseSceneRead(save_file, &br, block, HB06);
+            CaseSceneRead(save_file, &br, block, HB07);
+            CaseSceneRead(save_file, &br, block, HB08);
+            CaseSceneRead(save_file, &br, block, HB09);
+            CaseSceneRead(save_file, &br, block, HB10);
+            CaseSceneRead(save_file, &br, block, PG12);
+            case(FOURCC_CNTR):
+            {
+                bfbb_save_file_block_cntr c = {0};
+                bit_eat(&br, 1);
+                for(int i = 0; i<15; i++)
+                {
+                    for(int j = 0; j<spat_count_per_world[i]; j++)
+                    {
+                        c.spats[i][j] = bit_eat(&br, 16);
+                    }
+                }
+                for(int i = 0; i<15; i++)
+                {
+                    c.robot_data[i] = bit_eat(&br, 16);
+                }
+                c.reminder_sock_cntr = bit_eat(&br, 16);
+                c.cheats = bit_eat_s32(&br);
+                block->cntr = c;
+                break;
+            }
+            case(FOURCC_LEDR):
+            {
+                break;
+            }
+            case(FOURCC_ROOM):
+            {
+                break;
+            }
+            case(FOURCC_PREF):
+            {
+                break;
+            }
+            case(FOURCC_SVID):
+            {
+                break;
+            }
+            default:
+            {
+                char* chars = block->header.id_chars;
+                printf("Unknown block: %c%c%c%c", chars[3], chars[2], chars[1], chars[0]);
+                assert(0);
+            }
         }
     }
     // TODO(jelly): do more checks??
@@ -649,11 +852,28 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
             bit_push(b, bt.pickup.collected, 1);
             break;
         }
+        case BASE_TYPE_PLATFORM:
+        {
+            bit_push(b, bt.platform.base_enable, 1);
+            bit_push(b, bt.platform.show_ent, 1);
+            break;
+        }
+        case BASE_TYPE_STATIC:
+        {
+            bit_push(b, bt.staticc.base_enable, 1);
+            bit_push(b, bt.staticc.show_ent, 1);
+            break;
+        }
         case BASE_TYPE_TIMER:
         {
             bit_push(b, bt.timer.base_enable, 1);
             bit_push(b, bt.timer.state, 8);
             bit_push_float(b, bt.timer.seconds_left);
+            break;
+        }
+        case BASE_TYPE_GROUP:
+        {
+            bit_push(b, bt.group.base_enable, 1);
             break;
         }
         case BASE_TYPE_SFX:
@@ -664,8 +884,16 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
         case BASE_TYPE_COUNTER:
         {
             bit_push(b, bt.counter.base_enable, 1);
-            bit_push(b, bt.counter.count, 16);
             bit_push(b, bt.counter.state, 8);
+            bit_push(b, bt.counter.count, 16);
+            break;
+        }
+        case BASE_TYPE_BUTTON:
+        {
+            bit_push(b, bt.button.base_enable, 1);
+            bit_push(b, bt.button.show_ent, 1);
+            bit_push(b, bt.button.unknown_bit1, 1);
+            bit_push(b, bt.button.unknown_bit2, 1);
             break;
         }
         case BASE_TYPE_DISPATCHER:
@@ -699,6 +927,11 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
         case BASE_TYPE_CAMERAFLY:
         {
             bit_push(b, bt.camfly.base_enable, 1);
+            break;
+        }
+        case BASE_TYPE_CUTSCENEMGR:
+        {
+            //NOTE(Will): It does nothing?
             break;
         }
         default:
@@ -780,12 +1013,78 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 bit_push(&bw, block->plyr.idiot_levels, 6);
                 b->size+=size_to_write;
             } break;
-            CaseSceneWrite(&bw, block, b, HB01);
-            CaseSceneWrite(&bw, block, b, HB02);
             CaseSceneWrite(&bw, block, b, JF01);
             CaseSceneWrite(&bw, block, b, JF02);
             CaseSceneWrite(&bw, block, b, JF03);
             CaseSceneWrite(&bw, block, b, JF04);
+            CaseSceneWrite(&bw, block, b, KF01);
+            CaseSceneWrite(&bw, block, b, KF02);
+            CaseSceneWrite(&bw, block, b, KF04);
+            CaseSceneWrite(&bw, block, b, KF05);
+            CaseSceneWrite(&bw, block, b, MNU3);
+            CaseSceneWrite(&bw, block, b, RB01);
+            CaseSceneWrite(&bw, block, b, RB02);
+            CaseSceneWrite(&bw, block, b, RB03);
+            CaseSceneWrite(&bw, block, b, SM01);
+            CaseSceneWrite(&bw, block, b, SM02);
+            CaseSceneWrite(&bw, block, b, SM03);
+            CaseSceneWrite(&bw, block, b, SM04);
+            CaseSceneWrite(&bw, block, b, B101);
+            CaseSceneWrite(&bw, block, b, B201);
+            CaseSceneWrite(&bw, block, b, B302);
+            CaseSceneWrite(&bw, block, b, B303);
+            CaseSceneWrite(&bw, block, b, BB01);
+            CaseSceneWrite(&bw, block, b, BB02);
+            CaseSceneWrite(&bw, block, b, BB03);
+            CaseSceneWrite(&bw, block, b, BB04);
+            CaseSceneWrite(&bw, block, b, BC01);
+            CaseSceneWrite(&bw, block, b, BC02);
+            CaseSceneWrite(&bw, block, b, BC03);
+            CaseSceneWrite(&bw, block, b, BC04);
+            CaseSceneWrite(&bw, block, b, BC05);
+            CaseSceneWrite(&bw, block, b, DB01);
+            CaseSceneWrite(&bw, block, b, DB02);
+            CaseSceneWrite(&bw, block, b, DB03);
+            CaseSceneWrite(&bw, block, b, DB04);
+            CaseSceneWrite(&bw, block, b, DB06);
+            CaseSceneWrite(&bw, block, b, GL01);
+            CaseSceneWrite(&bw, block, b, GL02);
+            CaseSceneWrite(&bw, block, b, GL03);
+            CaseSceneWrite(&bw, block, b, GY01);
+            CaseSceneWrite(&bw, block, b, GY02);
+            CaseSceneWrite(&bw, block, b, GY03);
+            CaseSceneWrite(&bw, block, b, GY04);
+            CaseSceneWrite(&bw, block, b, HB00);
+            CaseSceneWrite(&bw, block, b, HB01);
+            CaseSceneWrite(&bw, block, b, HB02);
+            CaseSceneWrite(&bw, block, b, HB03);
+            CaseSceneWrite(&bw, block, b, HB04);
+            CaseSceneWrite(&bw, block, b, HB05);
+            CaseSceneWrite(&bw, block, b, HB06);
+            CaseSceneWrite(&bw, block, b, HB07);
+            CaseSceneWrite(&bw, block, b, HB08);
+            CaseSceneWrite(&bw, block, b, HB09);
+            CaseSceneWrite(&bw, block, b, HB10);
+            CaseSceneWrite(&bw, block, b, PG12);
+            case(FOURCC_CNTR):
+            {
+                bit_push(&bw, 1, 1);
+                for(int i = 0; i<15; i++)
+                {
+                    for(int j = 0; j<spat_count_per_world[i]; j++)
+                    {
+                        bit_push(&bw, block->cntr.spats[i][j], 16);
+                    }
+                }
+                for(int i = 0; i<15; i++)
+                {
+                    bit_push(&bw, block->cntr.robot_data[i], 16);
+                }
+                bit_push(&bw, block->cntr.reminder_sock_cntr, 16);
+                bit_push_s32(&bw, block->cntr.cheats);
+                b->size+=size_to_write;
+                break;
+            }
             default: write_bytes(b, block->raw_bytes, size_to_write);
         }
     }
@@ -794,10 +1093,14 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     return result;
 }
 
-void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
-    int size_of_data = 0xc9d4;
+void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int is_gci) {
+    int size_of_data = 0;
+    for(int i = 0; i<save_file->block_count; i++)
+    {
+        size_of_data+=save_file->blocks[i].header.block_size;
+    }
     //TODO(Will): Figure out how to actually fucking do this :)
-    uint32 sfil_size = size_of_data - b->size - 12;
+    uint32 sfil_size = 0xc808 - size_of_data;
     uint32 sfil_bytes_used = 8;
 
     if (is_gci) {
@@ -819,7 +1122,7 @@ void bfbb_save_file_append_sfil(write_buffer *b, int is_gci) {
     write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
     write_bytes(b, (unsigned char *)"RyanNeil", 8);
 
-    bfbb_save_file_append_padding(b, sfil_size - 8);
+    bfbb_save_file_append_padding(b, sfil_size);
 }
 
 int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is_gci) {
@@ -851,7 +1154,7 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
         bfbb_save_file_append_block(&b, &save_file->blocks[i], is_gci);
     }
 
-    bfbb_save_file_append_sfil(&b, is_gci);
+    bfbb_save_file_append_sfil(save_file, &b, is_gci);
 
     file_size = b.size - ((unsigned char *)gdat - static_buffer);
     checksum = crc32_get_checksum((char *)gdat + 16, file_size - 16);
