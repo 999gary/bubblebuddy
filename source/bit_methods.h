@@ -9,36 +9,34 @@ static float u32_as_float(u32 n) { return *(float *)&n; }
 typedef struct {
     s64 count;
     u8 *data;
+    s64 at;
 } bit_buffer;
 
-typedef struct {
-    bit_buffer data;
-    s64 at_bit;
-} bit_reader;
+typedef bit_buffer bit_reader;
 
-u8 get_byte_safe(bit_buffer buf, s32 index) {
-    if (index < buf.count) return buf.data[index];
+u8 get_byte_safe(bit_buffer *buf, s32 index) {
+    if (index < buf->count) return buf->data[index];
     return 0;
 }
 
 int bit_reader_at_end(bit_reader *reader) {
-    return reader->at_bit >= reader->data.count*8;
+    return reader->at >= reader->count*8;
 }
 
 u64 bit_peek(bit_reader *reader, u32 count) {
     assert(count > 0 && count <= 64 - 7);
-    if (reader->at_bit + count < reader->data.count*8) {
-        s64 byte_index = reader->at_bit / 8;
+    if (reader->at + count < reader->count*8) {
+        s64 byte_index = reader->at / 8;
         // TODO(jelly): better way to do this ????
-        u64 bits = (((u64)get_byte_safe(reader->data, byte_index+0) << 0*8) |
-                    ((u64)get_byte_safe(reader->data, byte_index+1) << 1*8) |
-                    ((u64)get_byte_safe(reader->data, byte_index+2) << 2*8) |
-                    ((u64)get_byte_safe(reader->data, byte_index+3) << 3*8) |
-                    ((u64)get_byte_safe(reader->data, byte_index+4) << 4*8) |
-                    ((u64)get_byte_safe(reader->data, byte_index+5) << 5*8) |
-                    ((u64)get_byte_safe(reader->data, byte_index+6) << 6*8) |
-                    ((u64)get_byte_safe(reader->data, byte_index+7) << 7*8));
-        bits >>= reader->at_bit % 8;
+        u64 bits = (((u64)get_byte_safe(reader, byte_index+0) << 0*8) |
+                    ((u64)get_byte_safe(reader, byte_index+1) << 1*8) |
+                    ((u64)get_byte_safe(reader, byte_index+2) << 2*8) |
+                    ((u64)get_byte_safe(reader, byte_index+3) << 3*8) |
+                    ((u64)get_byte_safe(reader, byte_index+4) << 4*8) |
+                    ((u64)get_byte_safe(reader, byte_index+5) << 5*8) |
+                    ((u64)get_byte_safe(reader, byte_index+6) << 6*8) |
+                    ((u64)get_byte_safe(reader, byte_index+7) << 7*8));
+        bits >>= reader->at % 8;
         return bits & ((1ULL << count) - 1);
     }
     return 0;
@@ -46,7 +44,7 @@ u64 bit_peek(bit_reader *reader, u32 count) {
 
 u64 bit_eat(bit_reader *reader, u32 count) {
     u64 result = bit_peek(reader, count);
-    reader->at_bit += count;
+    reader->at += count;
     return result;
 }
 

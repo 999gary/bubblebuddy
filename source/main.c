@@ -42,6 +42,29 @@ void hit_update_and_render(hit_main *cv);
 
 /*-------------------------------------------
 
+Util
+
+-------------------------------------------*/
+
+unsigned char *read_entire_file(char *path, int *size) {
+    int n; 
+    unsigned char *result = 0;
+    FILE *in = fopen(path, "rb");
+    assert(size);
+    if (in) {
+        fseek(in, 0, SEEK_END);
+        n = ftell(in);
+        rewind(in);
+        result = malloc(n);
+        fread(result, 1, n, in);
+        fclose(in);
+        *size = n;
+    }
+    return result;
+}
+
+/*-------------------------------------------
+
 Global Components
 
 -------------------------------------------*/
@@ -90,10 +113,6 @@ Screen 1 Components
 
 -------------------------------------------*/
 
-// TODO(jelly): maybe we should have all the blocks be dynamic buffer because users should be able to 
-//              edit them as much as they want and it would be more robust and betterer :)
-static char bytes_in_hex[MAX_BLOCK_COUNT][4096];
-
 char nibble_to_hex_char(unsigned char nibble) {
     if (nibble < 10) return nibble + '0';
     else if (nibble < 16) return nibble + 'A' - 10;
@@ -107,15 +126,16 @@ unsigned char hex_char_to_nibble(char hex_char) {
     return 0;
 }
 
+// NOTE(jelly): rip hex editor
+#ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
+
 void add_byte_to_hex_string(unsigned char byte, int block_index, int* counter) {
     bytes_in_hex[block_index][*counter] = nibble_to_hex_char(byte >> 4);
     bytes_in_hex[block_index][*counter+1] = nibble_to_hex_char(byte & 0xf);
     *counter+=3;
 }
 
-unsigned char hex_string_to_byte(char *s) {
-    return (hex_char_to_nibble(s[0]) << 4) | (hex_char_to_nibble(s[1]));
-}
+#endif
 
 void nk_menu_begin_labelf(struct nk_context *ctx, nk_flags align, struct nk_vec2 size, const char *fmt, ...) {
     static char buffer[2048];
@@ -151,13 +171,12 @@ char* thumbnail_label_from_id(int32_t id)
     return lookup[id];
 }
 
-uint32 drawable_block_ids[] = {
+u32 drawable_block_ids[] = {
     FOURCC_PLYR, FOURCC_LEDR, FOURCC_ROOM, FOURCC_HB02, FOURCC_CNTR
 };
 
-
 int is_drawable_block(bfbb_save_file_block *block) {
-    uint32 id = block->header.id;
+    u32 id = block->header.id;
     for (int i = 0; i < ArrayCount(drawable_block_ids); i++) {
         if (id == drawable_block_ids[i]) return 1;
     }
@@ -176,6 +195,7 @@ void hit_s1_data(hit_main *cv)
     
     static int is_hex_string_initialized = 0;
     
+#ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
     if (!is_hex_string_initialized) {
         for (int block_index = 0; block_index < block_count; block_index++) {
             int at = 0;
@@ -186,6 +206,26 @@ void hit_s1_data(hit_main *cv)
         }
         is_hex_string_initialized = 1;
     }
+#endif
+    
+#if 0
+    {
+        //NOTE(jelly): testing code
+        int scene_count = 0;
+        int max_base_type_count = 0;
+        for (int i = 0; i < save_file->block_count; i++) {
+            bfbb_save_file_block *block = &save_file->blocks[i];
+            if (bfbb_save_file_block_is_scene(block)) {
+                int n = arrlen(block->scene.base);
+                if (n > max_base_type_count) max_base_type_count = n;
+                scene_count++;
+            }
+        }
+        printf("max base type count = %d\n", max_base_type_count);
+        printf("scene count = %d\n", scene_count);
+        //-------------------------
+    }
+#endif
     
     if(nk_begin(cv->nk_ctx, "Data Panel", nk_rect(0, win_height_offset, window_width, win_height), NK_WINDOW_BORDER))
     {
@@ -269,7 +309,7 @@ void hit_s1_data(hit_main *cv)
                             nk_checkbox_label(cv->nk_ctx, "BB Unlocked", &a);
                             nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                             nk_checkbox_label(cv->nk_ctx, "CB Unlocked", &b);
-
+                            
                             blocks[i].plyr.has_bubble_bowl = !a;
                             blocks[i].plyr.has_cruise_bubble = !b;
                             break;
@@ -326,7 +366,7 @@ void hit_s1_data(hit_main *cv)
                                     nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
                                     nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                                     nk_checkbox_label(cv->nk_ctx, "Shown", &c);
-
+                                    
                                     b->trigger.base_enable = a;
                                     b->trigger.show_ent = c;
                                     
@@ -335,7 +375,7 @@ void hit_s1_data(hit_main *cv)
                         }
                         break;
                     }
-                    #ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
+#ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
                     default:
                     {
                         for(int b = 0; b < blocks[i].header.bytes_used; b++)
@@ -352,8 +392,8 @@ void hit_s1_data(hit_main *cv)
                         }
                         break;
                     }
-                    #endif
-
+#endif
+                    
                 }
                 nk_group_end(cv->nk_ctx);
             }
@@ -371,7 +411,7 @@ void hit_s1_bottom_panel(hit_main *cv)
         nk_layout_row_dynamic(cv->nk_ctx, win_height*.7, 3);
         if(nk_button_label(cv->nk_ctx, "Save File"))
         {
-            #ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
+#ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
             for(int i = 0; i<cv->save_file.block_count; i++)
             {
                 if(cv->s1_adv && cv->save_file.blocks[i].header.id == FOURCC_LEDR)
@@ -381,7 +421,7 @@ void hit_s1_bottom_panel(hit_main *cv)
                     cv->save_file.blocks[i].raw_bytes[y] = hex_string_to_byte(&bytes_in_hex[i][y*3]);
                 }
             }
-            #endif
+#endif
             int save_as_gci = -1;
             int extension_supplied = -1;
             static char path_buffer[4096];
@@ -457,10 +497,10 @@ void hit_common_init(hit_main *cv)
     {
         FILE *in = fopen(buffer, "rb");
         if (in) {
+            int size = 0;
+            unsigned char *data = read_entire_file(buffer, &size);
             bfbb_save_file save_file;
-            static unsigned char static_buffer[100000];
-            int size = fread(static_buffer, 1, 100000, in);
-            if (!bfbb_save_file_read(&cv->save_file, static_buffer, size)) {
+            if (!bfbb_save_file_read(&cv->save_file, data, size)) {
                 // TODO(jelly): the file couldn't be parsed properly: TELL THE USER OR SOMETHING !!!
             }
             cv->save_file_is_loaded = 1;

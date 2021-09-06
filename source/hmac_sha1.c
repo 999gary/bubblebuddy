@@ -4,24 +4,13 @@
 #include <string.h>
 #include <assert.h>
 
-#ifndef uint32
-#ifdef _MSC_VER
-typedef unsigned uint32;
-typedef unsigned __int64 uint64;
-#else
-#include <stdint.h>
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-#endif
-#endif
-
 #include "sha1.h"
 #include "sha1.c"
 
 typedef struct {
     union {
         unsigned char hash[20];
-        struct { uint32 h0, h1, h2, h3, h4; };
+        struct { u32 h0, h1, h2, h3, h4; };
     };
 } sha1_hash160;
 

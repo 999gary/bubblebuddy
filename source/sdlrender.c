@@ -1,6 +1,5 @@
+
 #include "opensans_font.h"
-
-
 
 int hit_init(hit_main *cv)
 {
@@ -15,8 +14,8 @@ int hit_init(hit_main *cv)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
     win = SDL_CreateWindow("CV",
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_ALLOW_HIGHDPI);
+                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                           WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_ALLOW_HIGHDPI);
     glContext = SDL_GL_CreateContext(win);
     SDL_GetWindowSize(win, &window_width, &window_height);
     cv->nk_ctx = nk_sdl_init(win);
@@ -44,11 +43,11 @@ int hit_init(hit_main *cv)
         SDL_GL_SwapWindow(win);
     }
     cleanup:
-        nk_sdl_shutdown();
-        SDL_GL_DeleteContext(glContext);
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        cv->running = 0;
+    nk_sdl_shutdown();
+    SDL_GL_DeleteContext(glContext);
+    SDL_DestroyWindow(win);
+    SDL_Quit();
+    cv->running = 0;
 }
 
 int main()

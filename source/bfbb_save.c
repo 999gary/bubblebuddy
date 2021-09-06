@@ -1,18 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <ctype.h>
-#include <time.h>
-
-#ifdef _MSC_VER
-typedef int       int32;
-typedef unsigned uint32;
-#else
-#include <stdint.h>
-typedef uint32_t uint32;
-typedef  int32_t  int32;
-#endif
 
 // NOTE(jelly): all code below assumes a little-endian architecture for now.
 
@@ -25,7 +10,7 @@ typedef  int32_t  int32;
 
 // NOTE(jelly): this code (and table) is based off of the crc32 code from the decomp
 //              https://github.com/bfbbdecomp/bfbb/blob/2bc99a1efcb8fab4cbccfc416d226f4a54b851ab/src/Core/x/xutil.cpp
-static const uint32 g_crc32_table[256] = {
+static const u32 g_crc32_table[256] = {
     0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b, 0x1a864db2, 0x1e475005,
     0x2608edb8, 0x22c9f00f, 0x2f8ad6d6, 0x2b4bcb61, 0x350c9b64, 0x31cd86d3, 0x3c8ea00a, 0x384fbdbd,
     0x4c11db70, 0x48d0c6c7, 0x4593e01e, 0x4152fda9, 0x5f15adac, 0x5bd4b01b, 0x569796c2, 0x52568b75,
@@ -59,69 +44,69 @@ static const uint32 g_crc32_table[256] = {
     0x89b8fd09, 0x8d79e0be, 0x803ac667, 0x84fbdbd0, 0x9abc8bd5, 0x9e7d9662, 0x933eb0bb, 0x97ffad0c,
     0xafb010b1, 0xab710d06, 0xa6322bdf, 0xa2f33668, 0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4,
 };
-uint32 xUtil_crc_update(uint32 crc_accum, char* data, int datasize)
+u32 xUtil_crc_update(u32 crc_accum, char* data, int datasize)
 {
     int i, j;
-
+    
     for (i = 0; i < datasize; i++)
     {
         j = ((crc_accum >> 24) ^ *data++) & 0xff;
         crc_accum = (crc_accum << 8) ^ g_crc32_table[j];
     }
-
+    
     return crc_accum;
 }
 
-uint32 crc32_get_checksum(char *data, int size) {
+u32 crc32_get_checksum(char *data, int size) {
     return xUtil_crc_update(-1, data, size);
 }
 
-#define BASE_TYPE_TRIGGER 1
-#define BASE_TYPE_PICKUP 4
-#define BASE_TYPE_PLATFORM 6
-#define BASE_TYPE_STATIC 11
-#define BASE_TYPE_TIMER 14
-#define BASE_TYPE_PORTAL 16
-#define BASE_TYPE_GROUP 17
-#define BASE_TYPE_SFX 19
-#define BASE_TYPE_COUNTER 22
-#define BASE_TYPE_BUTTON 24
-#define BASE_TYPE_DISPATCHER 30
-#define BASE_TYPE_COND 31
+#define BASE_TYPE_TRIGGER      1
+#define BASE_TYPE_PICKUP       4
+#define BASE_TYPE_PLATFORM     6
+#define BASE_TYPE_STATIC      11
+#define BASE_TYPE_TIMER       14
+#define BASE_TYPE_PORTAL      16
+#define BASE_TYPE_GROUP       17
+#define BASE_TYPE_SFX         19
+#define BASE_TYPE_COUNTER     22
+#define BASE_TYPE_BUTTON      24
+#define BASE_TYPE_DISPATCHER  30
+#define BASE_TYPE_COND        31
 #define BASE_TYPE_CUTSCENEMGR 40
 #define BASE_TYPE_TELEPORTBOX 49
-#define BASE_TYPE_TASKBOX 53
-#define BASE_TYPE_TAXI 57
-#define BASE_TYPE_CAMERAFLY 62
+#define BASE_TYPE_TASKBOX     53
+#define BASE_TYPE_TAXI        57
+#define BASE_TYPE_CAMERAFLY   62
 
 #define BFBB_SAVE_FILE_LEDR_RANDOM_TEXT "--TakeMeToYourLeader--"
 
 #pragma pack(push, 1)
 typedef struct {
-    uint32 crc32_checksum;
+    u32 crc32_checksum;
 } bfbb_save_file_block_gdat;
 
 typedef struct {
     char game_label[64];
-    int32 progress;
+    s32 progress;
     char unknown_bytes[12];
-    int32 thumbnail_index;
+    s32 thumbnail_index;
     char random_text[sizeof(BFBB_SAVE_FILE_LEDR_RANDOM_TEXT)-1];
 } bfbb_save_file_block_ledr;
 
 typedef struct {
-    uint32 sceneid; // NOTE(jelly): this is the FOURCC of the current level
+    u32 sceneid; // NOTE(jelly): this is the FOURCC of the current level
 } bfbb_save_file_block_room;
 
 typedef struct {
-    uint32 sound_mode;
+    u32 sound_mode;
     float music_volume;
     float sfx_volume;
-    uint32 rumble;
+    u32 rumble;
 } bfbb_save_file_block_pref;
 
 typedef struct {
-    int32 version;
+    s32 version;
 } bfbb_save_file_block_svid;
 
 typedef struct {
@@ -132,19 +117,19 @@ typedef struct {
 } bfbb_save_file_block_cntr;
 
 typedef struct {
-    int32 socks;
-    int32 pickups;
+    s32 socks;
+    s32 pickups;
 } bfbb_save_file_level_collectables;
 
 typedef struct {
-    int32 max_health;
-    int32 character;
-    int32 shinies;
-    int32 spats;
+    s32 max_health;
+    s32 character;
+    s32 shinies;
+    s32 spats;
     unsigned char has_bubble_bowl;
     unsigned char has_cruise_bubble;
     bfbb_save_file_level_collectables level_collectables[LEVEL_COUNT];
-    int32 total_socks;
+    s32 total_socks;
     char cutscene_played[14];
     //NOTE(Will): this stores 6 bits, i have no clue what they do :)
     u8 idiot_levels;
@@ -228,47 +213,47 @@ typedef struct {
 } base_type_camerafly;
 
 typedef struct {
-  int id, type;
-  union {
-    base_type_trigger trigger;
-    base_type_pickup pickup;
-    base_type_platform platform;
-    base_type_static staticc;
-    base_type_timer timer;
-    base_type_group group;
-    base_type_sfx sfx;
-    base_type_counter counter;
-    base_type_button button;
-    base_type_dispatcher dispatcher;
-    base_type_cond cond;
-    base_type_teleportbox tpbox;
-    base_type_taskbox taskbox;
-    base_type_taxi taxi;
-    base_type_camerafly camfly;
-  };
+    int id, type;
+    union {
+        base_type_trigger trigger;
+        base_type_pickup pickup;
+        base_type_platform platform;
+        base_type_static staticc;
+        base_type_timer timer;
+        base_type_group group;
+        base_type_sfx sfx;
+        base_type_counter counter;
+        base_type_button button;
+        base_type_dispatcher dispatcher;
+        base_type_cond cond;
+        base_type_teleportbox tpbox;
+        base_type_taskbox taskbox;
+        base_type_taxi taxi;
+        base_type_camerafly camfly;
+    };
 } base_type;
 
 typedef struct {
     u8 visited;
     f32 offsetx;
     f32 offsety;
-    base_type *base;
+    base_type *base; // NOTE(jelly): stb_ds dynamic array
 } bfbb_save_file_block_scene;
 
 typedef struct {
     union {
-        uint32 id;
+        u32 id;
         char id_chars[4];
     };
-    int32 block_size;
-    int32 bytes_used;
+    s32 block_size;
+    s32 bytes_used;
 } bfbb_save_file_block_header;
 
 typedef struct {
     bfbb_save_file_block_header header;
     union {
         unsigned char raw_bytes[512 - sizeof(bfbb_save_file_block_header)]; // NOTE(jelly): padding to 1/2 KiB
-
+        
         bfbb_save_file_block_gdat gdat;
         bfbb_save_file_block_ledr ledr;
         bfbb_save_file_block_room room;
@@ -289,7 +274,8 @@ typedef struct {
 //                -any zero-padding at the end (like in .gci)
 typedef struct {
     int original_file_size;
-    uint32 original_crc32_checksum; // NOTE(jelly): these probably aren't needed
+    u32 original_crc32_checksum; // NOTE(jelly): these probably aren't needed
+    int is_big_endian;
     int block_count;
     bfbb_save_file_block blocks[64];
 } bfbb_save_file;
@@ -299,8 +285,8 @@ typedef struct {
     unsigned char *bytes;
 } buffer;
 
-//#define FOURCC(s) ((uint32)(((s)[0]) | ((s)[1] << 8) | ((s)[2] << 16) | ((s)[3] << 24)))
-#define FOURCC_CONST(a,b,c,d) ((uint32)(((d)) | ((c) << 8) | ((b) << 16) | ((a) << 24)))
+//#define FOURCC(s) ((u32)(((s)[0]) | ((s)[1] << 8) | ((s)[2] << 16) | ((s)[3] << 24)))
+#define FOURCC_CONST(a,b,c,d) ((u32)(((d)) | ((c) << 8) | ((b) << 16) | ((a) << 24)))
 
 // NOTE(jelly): i love programming languages
 #define FOURCC_GDAT FOURCC_CONST('G', 'D', 'A', 'T')
@@ -367,15 +353,83 @@ typedef struct {
 #define FOURCC_SVID FOURCC_CONST('S', 'V', 'I', 'D')
 #define FOURCC_SFIL FOURCC_CONST('S', 'F', 'I', 'L')
 
+int bfbb_save_file_block_is_scene(bfbb_save_file_block *block) {
+    static const u32 scene_fourccs[] = {
+        FOURCC_JF01,
+        FOURCC_JF02,
+        FOURCC_JF03,
+        FOURCC_JF04,
+        FOURCC_KF01,
+        FOURCC_KF02,
+        FOURCC_KF04,
+        FOURCC_KF05,
+        FOURCC_MNU3,
+        FOURCC_RB01,
+        FOURCC_RB02,
+        FOURCC_RB03,
+        FOURCC_SM01,
+        FOURCC_SM02,
+        FOURCC_SM03,
+        FOURCC_SM04,
+        FOURCC_B101,
+        FOURCC_B201,
+        FOURCC_B302,
+        FOURCC_B303,
+        FOURCC_BB01,
+        FOURCC_BB02,
+        FOURCC_BB03,
+        FOURCC_BB04,
+        FOURCC_BC01,
+        FOURCC_BC02,
+        FOURCC_BC03,
+        FOURCC_BC04,
+        FOURCC_BC05,
+        FOURCC_DB01,
+        FOURCC_DB02,
+        FOURCC_DB03,
+        FOURCC_DB04,
+        FOURCC_DB06,
+        FOURCC_GL01,
+        FOURCC_GL02,
+        FOURCC_GL03,
+        FOURCC_GY01,
+        FOURCC_GY02,
+        FOURCC_GY03,
+        FOURCC_GY04,
+        FOURCC_HB00,
+        FOURCC_HB01,
+        FOURCC_HB02,
+        FOURCC_HB03,
+        FOURCC_HB04,
+        FOURCC_HB05,
+        FOURCC_HB06,
+        FOURCC_HB07,
+        FOURCC_HB08,
+        FOURCC_HB09,
+        FOURCC_PG12,
+    };
+    u32 id = block->header.id;
+    for (int i = 0; i < ArrayCount(scene_fourccs); i++) {
+        if (id == scene_fourccs[i]) return 1;
+    }
+    return 0;
+}
 
-
-
-void byteswap32(uint32 *p) {
-    uint32 n = *p;
+void byteswap32(u32 *p) {
+    u32 n = *p;
     *p = (((n &       0xff) << 24) |
           ((n &     0xff00) <<  8) |
           ((n &   0xff0000) >>  8) |
           ((n & 0xff000000) >> 24));
+}
+
+void byteswap32_n(u8 *data, int count) {
+    assert(count % 4 ==0);
+    u32 *data32 = (u32 *)data;
+    count /= 4;
+    for (int i = 0; i < count; i++) {
+        byteswap32(&data32[i]);
+    }
 }
 
 unsigned char *peek_bytes(buffer *b, int count) {
@@ -396,6 +450,16 @@ unsigned char *eat_bytes(buffer *b, int count) {
     return result;
 }
 
+void bfbb_save_file_free_blocks(bfbb_save_file *save_file) {
+    int block_count = save_file->block_count;
+    for (int i = 0; i < block_count; i++) {
+        bfbb_save_file_block *block = &save_file->blocks[i];
+        if (bfbb_save_file_block_is_scene(block)) {
+            arrfree(block->scene.base);
+        }
+    }
+}
+
 bfbb_save_file_block_header bfbb_save_file_block_header_parse(buffer *b, int is_gci) {
     bfbb_save_file_block_header result = {0};
     if (peek_bytes(b, sizeof(bfbb_save_file_block_header))) {
@@ -403,8 +467,8 @@ bfbb_save_file_block_header bfbb_save_file_block_header_parse(buffer *b, int is_
     }
     if (is_gci) {
         byteswap32(&result.id);
-        byteswap32((uint32 *)&result.block_size);
-        byteswap32((uint32 *)&result.bytes_used);
+        byteswap32((u32 *)&result.block_size);
+        byteswap32((u32 *)&result.bytes_used);
     }
     return result;
 }
@@ -418,20 +482,20 @@ void bfbb_save_file_block_byteswap(bfbb_save_file_block *new_block) {
             byteswap32(&new_block->gdat.crc32_checksum);
         } break;
         case FOURCC_LEDR: {
-            byteswap32((uint32 *)&new_block->ledr.progress);
-            byteswap32((uint32 *)&new_block->ledr.thumbnail_index);
+            byteswap32((u32 *)&new_block->ledr.progress);
+            byteswap32((u32 *)&new_block->ledr.thumbnail_index);
         } break;
         case FOURCC_ROOM: {
             byteswap32(&new_block->room.sceneid);
         } break;
         case FOURCC_PREF: {
             byteswap32(&new_block->pref.sound_mode);
-            byteswap32((uint32 *)&new_block->pref.music_volume);
-            byteswap32((uint32 *)&new_block->pref.sfx_volume);
+            byteswap32((u32 *)&new_block->pref.music_volume);
+            byteswap32((u32 *)&new_block->pref.sfx_volume);
             byteswap32(&new_block->pref.rumble);
         } break;
         case FOURCC_SVID: {
-            byteswap32((uint32 *)&new_block->svid.version);
+            byteswap32((u32 *)&new_block->svid.version);
         } break;
     }
 }
@@ -584,6 +648,9 @@ int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_sa
     // NOTE(jelly): declaring a scene like this before writing to block->scene MUST be done because block->scene is a union
     //              and reading from scene while writing to it will be broken.
     bfbb_save_file_block_scene scene = {0};
+    
+    if (save_file->is_big_endian) byteswap32_n(br->data, br->count);
+    
     scene.visited = bit_eat(br, 1);
     scene.offsetx = bit_eat_float(br);
     scene.offsety = bit_eat_float(br);
@@ -596,9 +663,9 @@ int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_sa
 
 #define CaseSceneTableName(fourcc) fourcc##_table
 #define CaseSceneRead(sf,br,bl,fourcc) \
-    case FOURCC_##fourcc: \
-    bfbb_save_file_read_scene(sf, br, bl, (u32 *)CaseSceneTableName(fourcc), ArrayCount(CaseSceneTableName(fourcc)));\
-    break;
+case FOURCC_##fourcc: \
+bfbb_save_file_read_scene(sf, br, bl, (u32 *)CaseSceneTableName(fourcc), ArrayCount(CaseSceneTableName(fourcc)));\
+break;
 
 const u8 spat_count_per_world[] = {
     8,8,8,8,1,8,8,8,1,8,8,8,2,8,8
@@ -610,12 +677,11 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
     {
         bfbb_save_file_block* block = &save_file->blocks[i];
         bit_buffer b = {block->header.bytes_used, block->raw_bytes};
-        bit_reader br = {b};
+        bit_reader br = b;
         switch(block->header.id)
         {
             case(FOURCC_PLYR):
             {
-
                 bfbb_save_file_block_plyr p = {0};
                 bit_eat(&br, 1);
                 p.max_health = bit_eat_s32(&br);
@@ -624,13 +690,13 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 p.spats = bit_eat_s32(&br);
                 p.has_bubble_bowl = bit_eat(&br, 8);
                 p.has_cruise_bubble = bit_eat(&br, 8);
-
+                
                 for(int i = 0; i<LEVEL_COUNT; i++)
                 {
                     p.level_collectables[i].socks = bit_eat_s32(&br);
                     p.level_collectables[i].pickups = bit_eat_s32(&br);
                 }
-
+                
                 p.total_socks = bit_eat_s32(&br);
                 for(int i = 0; i<14; i++)
                 {
@@ -747,14 +813,16 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
     bfbb_save_file_block gdat;
     int rc;
     int i = 0;
-
+    
+    result->is_big_endian = is_gci;
+    
     if (is_gci) {
         eat_bytes(&b, 0x5880); // NOTE(jelly): gci file header
-
+        
         eat_bytes(&b, 512); // NOTE(jelly): zeros
         magic_string = (char *)eat_bytes(&b, sizeof(BFBB_SAVE_FILE_MAGIC_STRING) - 1);
         eat_bytes(&b, 0x599); // NOTE(jelly): zeros - wiki says 599 (decimal); i assume this is a typo
-
+        
         /*
         if (strcmp(magic_string, BFBB_SAVE_FILE_MAGIC_STRING)) {
             // assert(0);
@@ -762,23 +830,23 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
         }
 */
     }
-
+    
     rc = bfbb_save_file_block_read(&b, &gdat, is_gci);
     if (rc < 1) return 0;
     result->original_file_size = gdat.header.bytes_used;
     result->original_crc32_checksum = gdat.gdat.crc32_checksum;
-
+    
     while (rc = bfbb_save_file_block_read(&b, &result->blocks[i++], is_gci)) {
         if (rc < 0) {
             result->block_count = 0;
             return 0;
         }
     }
-
+    
     result->block_count = i-1;
-
+    
     bfbb_save_file_read_bit_blocks(result);
-
+    
     return 1;
 }
 
@@ -789,16 +857,16 @@ void bfbb_save_file_make_dummy_gdat_block(bfbb_save_file_block *block) {
     block->gdat.crc32_checksum = 0;
 }
 
-void bfbb_save_file_set_gdat_block(bfbb_save_file_block *block, int file_size, uint32 crc32_checksum, int is_gci) {
+void bfbb_save_file_set_gdat_block(bfbb_save_file_block *block, int file_size, u32 crc32_checksum, int is_gci) {
     block->header.id = FOURCC_GDAT;
     block->header.block_size = 1;
     block->header.bytes_used = file_size;
     block->gdat.crc32_checksum = crc32_checksum;
-
+    
     if (is_gci) {
         byteswap32(&block->header.id);
-        byteswap32((uint32 *)&block->header.block_size);
-        byteswap32((uint32 *)&block->header.bytes_used);
+        byteswap32((u32 *)&block->header.block_size);
+        byteswap32((u32 *)&block->header.bytes_used);
         byteswap32(&block->gdat.crc32_checksum);
     }
 }
@@ -949,15 +1017,18 @@ void bfbb_save_file_write_scene_block_stuff(bit_writer *bw, bfbb_save_file_block
     bit_push_float(bw, block->scene.offsety);
 }
 
-void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32 *table, write_buffer *b) {
+void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32 *table, write_buffer *b, int is_big_endian) {
     bfbb_save_file_write_scene_block_stuff(bw, block); // TODO(jelly): name this better for godsake
     for (int i =0; i < arrlen(block->scene.base); i++) {
         bfbb_save_file_write_scene_block(bw, table, i, block);
     }
-    b->size += block->header.bytes_used;
+    unsigned char *data = b->bytes + b->size;
+    int n = block->header.bytes_used;
+    b->size += n;
+    if (is_big_endian) byteswap32_n(data, n);
 }
 
-#define CaseSceneWrite(bw, block, b, fourcc) case FOURCC_##fourcc: bfbb_save_file_write_scene(bw, block, (u32*)fourcc##_table, b); break;
+#define CaseSceneWrite(bw, block, b, is_gci, fourcc) case FOURCC_##fourcc: bfbb_save_file_write_scene(bw, block, (u32*)fourcc##_table, b, is_gci); break;
 
 bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_file_block *block, int is_gci) {
     int is_gdat = block->header.id == FOURCC_GDAT;
@@ -977,19 +1048,19 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     }
     */
     bfbb_save_file_block *result = 0;
-
+    
     if (is_gci) {
         bfbb_save_file_block_byteswap(block);
         // NOTE(jelly): we need to byteswap the id AFTER because
         //              bfbb_save_file_block_byteswap() needs to read the id in LE.
         byteswap32(&block->header.id);
-        byteswap32((uint32 *)&block->header.block_size);
-        byteswap32((uint32 *)&block->header.bytes_used);
+        byteswap32((u32 *)&block->header.block_size);
+        byteswap32((u32 *)&block->header.bytes_used);
     }
-
+    
     result = (bfbb_save_file_block *)(b->bytes + b ->size);
     write_bytes(b, (unsigned char *)&block->header, sizeof(block->header));
-
+    
     {
         bit_writer bw = {b->max_size - b->size, b->bytes + b->size};
         switch (block->header.id) {
@@ -1014,59 +1085,59 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 bit_push(&bw, block->plyr.idiot_levels, 6);
                 b->size+=size_to_write;
             } break;
-            CaseSceneWrite(&bw, block, b, JF01);
-            CaseSceneWrite(&bw, block, b, JF02);
-            CaseSceneWrite(&bw, block, b, JF03);
-            CaseSceneWrite(&bw, block, b, JF04);
-            CaseSceneWrite(&bw, block, b, KF01);
-            CaseSceneWrite(&bw, block, b, KF02);
-            CaseSceneWrite(&bw, block, b, KF04);
-            CaseSceneWrite(&bw, block, b, KF05);
-            CaseSceneWrite(&bw, block, b, MNU3);
-            CaseSceneWrite(&bw, block, b, RB01);
-            CaseSceneWrite(&bw, block, b, RB02);
-            CaseSceneWrite(&bw, block, b, RB03);
-            CaseSceneWrite(&bw, block, b, SM01);
-            CaseSceneWrite(&bw, block, b, SM02);
-            CaseSceneWrite(&bw, block, b, SM03);
-            CaseSceneWrite(&bw, block, b, SM04);
-            CaseSceneWrite(&bw, block, b, B101);
-            CaseSceneWrite(&bw, block, b, B201);
-            CaseSceneWrite(&bw, block, b, B302);
-            CaseSceneWrite(&bw, block, b, B303);
-            CaseSceneWrite(&bw, block, b, BB01);
-            CaseSceneWrite(&bw, block, b, BB02);
-            CaseSceneWrite(&bw, block, b, BB03);
-            CaseSceneWrite(&bw, block, b, BB04);
-            CaseSceneWrite(&bw, block, b, BC01);
-            CaseSceneWrite(&bw, block, b, BC02);
-            CaseSceneWrite(&bw, block, b, BC03);
-            CaseSceneWrite(&bw, block, b, BC04);
-            CaseSceneWrite(&bw, block, b, BC05);
-            CaseSceneWrite(&bw, block, b, DB01);
-            CaseSceneWrite(&bw, block, b, DB02);
-            CaseSceneWrite(&bw, block, b, DB03);
-            CaseSceneWrite(&bw, block, b, DB04);
-            CaseSceneWrite(&bw, block, b, DB06);
-            CaseSceneWrite(&bw, block, b, GL01);
-            CaseSceneWrite(&bw, block, b, GL02);
-            CaseSceneWrite(&bw, block, b, GL03);
-            CaseSceneWrite(&bw, block, b, GY01);
-            CaseSceneWrite(&bw, block, b, GY02);
-            CaseSceneWrite(&bw, block, b, GY03);
-            CaseSceneWrite(&bw, block, b, GY04);
-            CaseSceneWrite(&bw, block, b, HB00);
-            CaseSceneWrite(&bw, block, b, HB01);
-            CaseSceneWrite(&bw, block, b, HB02);
-            CaseSceneWrite(&bw, block, b, HB03);
-            CaseSceneWrite(&bw, block, b, HB04);
-            CaseSceneWrite(&bw, block, b, HB05);
-            CaseSceneWrite(&bw, block, b, HB06);
-            CaseSceneWrite(&bw, block, b, HB07);
-            CaseSceneWrite(&bw, block, b, HB08);
-            CaseSceneWrite(&bw, block, b, HB09);
-            CaseSceneWrite(&bw, block, b, HB10);
-            CaseSceneWrite(&bw, block, b, PG12);
+            CaseSceneWrite(&bw, block, b, is_gci, JF01);
+            CaseSceneWrite(&bw, block, b, is_gci, JF02);
+            CaseSceneWrite(&bw, block, b, is_gci, JF03);
+            CaseSceneWrite(&bw, block, b, is_gci, JF04);
+            CaseSceneWrite(&bw, block, b, is_gci, KF01);
+            CaseSceneWrite(&bw, block, b, is_gci, KF02);
+            CaseSceneWrite(&bw, block, b, is_gci, KF04);
+            CaseSceneWrite(&bw, block, b, is_gci, KF05);
+            CaseSceneWrite(&bw, block, b, is_gci, MNU3);
+            CaseSceneWrite(&bw, block, b, is_gci, RB01);
+            CaseSceneWrite(&bw, block, b, is_gci, RB02);
+            CaseSceneWrite(&bw, block, b, is_gci, RB03);
+            CaseSceneWrite(&bw, block, b, is_gci, SM01);
+            CaseSceneWrite(&bw, block, b, is_gci, SM02);
+            CaseSceneWrite(&bw, block, b, is_gci, SM03);
+            CaseSceneWrite(&bw, block, b, is_gci, SM04);
+            CaseSceneWrite(&bw, block, b, is_gci, B101);
+            CaseSceneWrite(&bw, block, b, is_gci, B201);
+            CaseSceneWrite(&bw, block, b, is_gci, B302);
+            CaseSceneWrite(&bw, block, b, is_gci, B303);
+            CaseSceneWrite(&bw, block, b, is_gci, BB01);
+            CaseSceneWrite(&bw, block, b, is_gci, BB02);
+            CaseSceneWrite(&bw, block, b, is_gci, BB03);
+            CaseSceneWrite(&bw, block, b, is_gci, BB04);
+            CaseSceneWrite(&bw, block, b, is_gci, BC01);
+            CaseSceneWrite(&bw, block, b, is_gci, BC02);
+            CaseSceneWrite(&bw, block, b, is_gci, BC03);
+            CaseSceneWrite(&bw, block, b, is_gci, BC04);
+            CaseSceneWrite(&bw, block, b, is_gci, BC05);
+            CaseSceneWrite(&bw, block, b, is_gci, DB01);
+            CaseSceneWrite(&bw, block, b, is_gci, DB02);
+            CaseSceneWrite(&bw, block, b, is_gci, DB03);
+            CaseSceneWrite(&bw, block, b, is_gci, DB04);
+            CaseSceneWrite(&bw, block, b, is_gci, DB06);
+            CaseSceneWrite(&bw, block, b, is_gci, GL01);
+            CaseSceneWrite(&bw, block, b, is_gci, GL02);
+            CaseSceneWrite(&bw, block, b, is_gci, GL03);
+            CaseSceneWrite(&bw, block, b, is_gci, GY01);
+            CaseSceneWrite(&bw, block, b, is_gci, GY02);
+            CaseSceneWrite(&bw, block, b, is_gci, GY03);
+            CaseSceneWrite(&bw, block, b, is_gci, GY04);
+            CaseSceneWrite(&bw, block, b, is_gci, HB00);
+            CaseSceneWrite(&bw, block, b, is_gci, HB01);
+            CaseSceneWrite(&bw, block, b, is_gci, HB02);
+            CaseSceneWrite(&bw, block, b, is_gci, HB03);
+            CaseSceneWrite(&bw, block, b, is_gci, HB04);
+            CaseSceneWrite(&bw, block, b, is_gci, HB05);
+            CaseSceneWrite(&bw, block, b, is_gci, HB06);
+            CaseSceneWrite(&bw, block, b, is_gci, HB07);
+            CaseSceneWrite(&bw, block, b, is_gci, HB08);
+            CaseSceneWrite(&bw, block, b, is_gci, HB09);
+            CaseSceneWrite(&bw, block, b, is_gci, HB10);
+            CaseSceneWrite(&bw, block, b, is_gci, PG12);
             case(FOURCC_CNTR):
             {
                 bit_push(&bw, 1, 1);
@@ -1089,7 +1160,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
             default: write_bytes(b, block->raw_bytes, size_to_write);
         }
     }
-
+    
     bfbb_save_file_append_padding(b, padding_size);
     return result;
 }
@@ -1102,9 +1173,9 @@ void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int 
     }
     size_of_data = b->size;
     //TODO(Will): Figure out how to actually fucking do this :)
-    uint32 sfil_size = 0xc808 - size_of_data + 1036;
-    uint32 sfil_bytes_used = 8;
-
+    u32 sfil_size = 0xc808 - size_of_data + 1036;
+    u32 sfil_bytes_used = 8;
+    
     if (is_gci) {
         unsigned char sfil_id[] = {
             0x53, 0x46, 0x49, 0x4C
@@ -1123,7 +1194,7 @@ void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int 
         byteswap32(&sfil_size);
     write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
     write_bytes(b, (unsigned char *)"RyanNeil", 8);
-
+    
     bfbb_save_file_append_padding(b, sfil_size);
 }
 
@@ -1131,17 +1202,19 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
     static unsigned char static_buffer[128*1024];
     write_buffer b = {sizeof(static_buffer), 0, static_buffer};
     int file_size, i;
-    uint32 checksum;
+    u32 checksum;
     bfbb_save_file_block dummy_gdat, *gdat;
     int bytes_written_out = 0;
-
+    
+    save_file->is_big_endian = is_gci;
+    
     memset(static_buffer, 0, sizeof(static_buffer)); // NOTE(jelly): in case we write out multiple files, i want this buffer clear.
-
+    
     if (is_gci) {
         const int GCI_EPOCH = 946702799;
-        uint32 *date_address = (uint32*)(static_buffer + 0x28);
-        uint32 date = (uint32)time(0) - GCI_EPOCH;
-
+        u32 *date_address = (u32*)(static_buffer + 0x28);
+        u32 date = (u32)time(0) - GCI_EPOCH;
+        
         byteswap32(&date);
         write_bytes(&b, (unsigned char *)bfbb_gci_header, sizeof(bfbb_gci_header));
         *date_address = date;
@@ -1149,27 +1222,27 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
         write_bytes(&b, (unsigned char *)BFBB_SAVE_FILE_MAGIC_STRING, sizeof(BFBB_SAVE_FILE_MAGIC_STRING)-1);
         write_byte_n_times(&b, 0, 0x599);
     }
-
+    
     bfbb_save_file_make_dummy_gdat_block(&dummy_gdat);
     gdat = bfbb_save_file_append_block(&b, &dummy_gdat, is_gci);
     for (i = 0; i < save_file->block_count; i++) {
         bfbb_save_file_append_block(&b, &save_file->blocks[i], is_gci);
     }
-
+    
     bfbb_save_file_append_sfil(save_file, &b, is_gci);
-
+    
     file_size = b.size - ((unsigned char *)gdat - static_buffer);
     checksum = crc32_get_checksum((char *)gdat + 16, file_size - 16);
-
+    
     bfbb_save_file_set_gdat_block(gdat, file_size, checksum, is_gci);
-
+    
     if (is_gci) {
         write_byte_n_times(&b, 0, 0x14040 - b.size);
     } else {
         sha1_hash160 xbox_sig = bfbb_hmac_sha1(b.bytes, b.size);
         write_bytes(&b, xbox_sig.hash, 20);
     }
-
+    
     {
         FILE *out = fopen(path, "wb");
         if (out) {
@@ -1177,7 +1250,7 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
             fclose(out);
         } else return 0;
     }
-
+    
     return bytes_written_out == b.size;
 }
 
@@ -1214,7 +1287,7 @@ int bfbb_save_file_read(bfbb_save_file *result, unsigned char *data, int len) {
 
 // NOTE(jelly): API idea
 bfbb_save_file_block *bfbb_save_file_find_block(bfbb_save_file *b, char *fourcc) {
-    uint32 id = FOURCC_CONST(fourcc[0], fourcc[1], fourcc[2], fourcc[3]);
+    u32 id = FOURCC_CONST(fourcc[0], fourcc[1], fourcc[2], fourcc[3]);
     int i;
     for (i = 0; i < b->block_count; i++) {
         bfbb_save_file_block *bl = &b->blocks[i];
