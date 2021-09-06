@@ -986,6 +986,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
         byteswap32((uint32 *)&block->header.block_size);
         byteswap32((uint32 *)&block->header.bytes_used);
     }
+
     result = (bfbb_save_file_block *)(b->bytes + b ->size);
     write_bytes(b, (unsigned char *)&block->header, sizeof(block->header));
 
@@ -1099,8 +1100,9 @@ void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int 
     {
         size_of_data+=save_file->blocks[i].header.block_size;
     }
+    size_of_data = b->size;
     //TODO(Will): Figure out how to actually fucking do this :)
-    uint32 sfil_size = 0xc808 - size_of_data;
+    uint32 sfil_size = 0xc808 - size_of_data + 1036;
     uint32 sfil_bytes_used = 8;
 
     if (is_gci) {

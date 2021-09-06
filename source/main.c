@@ -152,7 +152,7 @@ char* thumbnail_label_from_id(int32_t id)
 }
 
 uint32 drawable_block_ids[] = {
-    FOURCC_PLYR, FOURCC_LEDR, FOURCC_ROOM, FOURCC_HB02
+    FOURCC_PLYR, FOURCC_LEDR, FOURCC_ROOM, FOURCC_HB02, FOURCC_CNTR
 };
 
 
@@ -274,6 +274,38 @@ void hit_s1_data(hit_main *cv)
                             blocks[i].plyr.has_cruise_bubble = !b;
                             break;
                         }
+                    }
+                    case(FOURCC_CNTR):
+                    {
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "0 = Spat not found");
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "1 = Spat found");
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "2 = Spat Collected");
+                        for(int k = 0; k<15; k++)
+                        {
+                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 8);
+                            for(int j = 0; j<spat_count_per_world[k]; j++)
+                            {
+                                s16* spat = &blocks[i].cntr.spats[k][j];
+                                char yeah[2];
+                                yeah[0] = nibble_to_hex_char(*spat & 0xf);
+                                yeah[1] = '\0';
+                                if(nk_button_label(cv->nk_ctx, yeah))
+                                {
+                                    if(*spat == 2)
+                                    {
+                                        *spat = 0;
+                                    }
+                                    else
+                                    {
+                                        *spat += 1;
+                                    }
+                                }
+                            }
+                        }
+                        break;
                     }
                     case(FOURCC_HB02):
                     {
