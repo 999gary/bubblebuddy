@@ -192,7 +192,6 @@ typedef struct {
     u8 base_enable;
     u8 show_ent;
     u8 opened;
-    u8 player_state;
 } base_type_teleportbox;
 
 typedef struct {
@@ -456,7 +455,6 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
             b.tpbox.base_enable = (u8)bit_eat(br, 1);
             b.tpbox.show_ent = (u8)bit_eat(br, 1);
             b.tpbox.opened = (u8)bit_eat(br, 1);
-            b.tpbox.player_state = (u8)bit_eat(br, 8);
             break;
         }
         case BASE_TYPE_TASKBOX:
@@ -757,7 +755,6 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
             bit_push(b, bt.tpbox.base_enable, 1);
             bit_push(b, bt.tpbox.show_ent, 1);
             bit_push(b, bt.tpbox.opened, 1);
-            bit_push(b, bt.tpbox.player_state, 8);
             break;
         }
         case BASE_TYPE_TASKBOX:
