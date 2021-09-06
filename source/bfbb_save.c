@@ -1059,6 +1059,15 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     
     result = (bfbb_save_file_block *)(b->bytes + b ->size);
     write_bytes(b, (unsigned char *)&block->header, sizeof(block->header));
+
+    if (is_gci) {
+        bfbb_save_file_block_byteswap(block);
+        // NOTE(jelly): we need to byteswap the id AFTER because
+        //              bfbb_save_file_block_byteswap() needs to read the id in LE.
+        byteswap32(&block->header.id);
+        byteswap32((u32 *)&block->header.block_size);
+        byteswap32((u32 *)&block->header.bytes_used);
+    }
     
     {
         bit_writer bw = {b->max_size - b->size, b->bytes + b->size};
