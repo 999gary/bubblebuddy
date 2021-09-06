@@ -132,7 +132,6 @@ typedef struct {
     int32 version;
 } bfbb_save_file_block_svid;
 
-
 typedef struct {
     int32 socks;
     int32 pickups;
@@ -148,6 +147,8 @@ typedef struct {
     bfbb_save_file_level_collectables level_collectables[LEVEL_COUNT];
     int32 total_socks;
     char cutscene_played[14];
+    //NOTE(Will): this stores 6 bits, i have no clue what they do :)
+    u8 idiot_levels;
 } bfbb_save_file_block_plyr;
 
 typedef struct {
@@ -165,8 +166,7 @@ typedef struct {
 typedef struct {
     u8 base_enable;
     u8 state;
-    //TODO(Will): Make this a float
-    u32 seconds_left;
+    f32 seconds_left;
 } base_type_timer;
 
 typedef struct {
@@ -225,9 +225,9 @@ typedef struct {
 } base_type;
 
 typedef struct {
-    //TODO(Will): Jelly fix this :)
-    u32 offsetx;
-    u32 offsety;
+    u8 visited;
+    f32 offsetx;
+    f32 offsety;
     base_type *base;
 } bfbb_save_file_block_scene;
 
@@ -426,7 +426,7 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
         {
             b.timer.base_enable = (u8)bit_eat(br, 1);
             b.timer.state = (u8)bit_eat(br, 8);
-            b.timer.seconds_left = (u32)bit_eat(br, 32);
+            b.timer.seconds_left = bit_eat_float(br);
             break;
         }
         case BASE_TYPE_SFX:
@@ -514,6 +514,7 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 {
                     p.cutscene_played[i] = (char)bit_eat_s32(&br);
                 }
+                p.idiot_levels = (u32)bit_eat(&br, 6);
                 block->plyr = p;
                 break;
             }
@@ -522,9 +523,9 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 bfbb_save_file_block_scene scene = {0};
                 bit_buffer b = {block->header.bytes_used, block->raw_bytes};
                 bit_reader br = {b};
-                bit_eat(&br, 1);
-                scene.offsetx = bit_eat(&br, 32);
-                scene.offsety = bit_eat(&br, 32);
+                scene.visited = (u8)bit_eat(&br, 1);
+                scene.offsetx = bit_eat_float(&br);
+                scene.offsety = bit_eat_float(&br);
                 for(int i = 0; i<ArrayCount(HB01_table); i++)
                 {
                     arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)HB01_table));
@@ -538,9 +539,9 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 bfbb_save_file_block_scene scene = {0};
                 bit_buffer b = {block->header.bytes_used, block->raw_bytes};
                 bit_reader br = {b};
-                bit_eat(&br, 1);
-                scene.offsetx = bit_eat(&br, 32);
-                scene.offsety = bit_eat(&br, 32);
+                scene.visited = (u8)bit_eat(&br, 1);
+                scene.offsetx = bit_eat_float(&br);
+                scene.offsety = bit_eat_float(&br);
                 for(int i = 0; i<ArrayCount(HB02_table); i++)
                 {
                     arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)HB02_table));
@@ -553,9 +554,9 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 bfbb_save_file_block_scene scene = {0};
                 bit_buffer b = {block->header.bytes_used, block->raw_bytes};
                 bit_reader br = {b};
-                bit_eat(&br, 1);
-                scene.offsetx = bit_eat(&br, 32);
-                scene.offsety = bit_eat(&br, 32);
+                scene.visited = (u8)bit_eat(&br, 1);
+                scene.offsetx = bit_eat_float(&br);
+                scene.offsety = bit_eat_float(&br);
                 for(int i = 0; i<ArrayCount(JF01_table); i++)
                 {
                     arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF01_table));
@@ -568,9 +569,9 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 bfbb_save_file_block_scene scene = {0};
                 bit_buffer b = {block->header.bytes_used, block->raw_bytes};
                 bit_reader br = {b};
-                bit_eat(&br, 1);
-                scene.offsetx = bit_eat(&br, 32);
-                scene.offsety = bit_eat(&br, 32);
+                scene.visited = (u8)bit_eat(&br, 1);
+                scene.offsetx = bit_eat_float(&br);
+                scene.offsety = bit_eat_float(&br);
                 for(int i = 0; i<ArrayCount(JF02_table); i++)
                 {
                     arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF02_table));
@@ -583,9 +584,9 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 bfbb_save_file_block_scene scene = {0};
                 bit_buffer b = {block->header.bytes_used, block->raw_bytes};
                 bit_reader br = {b};
-                bit_eat(&br, 1);
-                scene.offsetx = bit_eat(&br, 32);
-                scene.offsety = bit_eat(&br, 32);
+                scene.visited = (u8)bit_eat(&br, 1);
+                scene.offsetx = bit_eat_float(&br);
+                scene.offsety = bit_eat_float(&br);
                 for(int i = 0; i<ArrayCount(JF03_table); i++)
                 {
                     arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF03_table));
@@ -598,9 +599,9 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 bfbb_save_file_block_scene scene = {0};
                 bit_buffer b = {block->header.bytes_used, block->raw_bytes};
                 bit_reader br = {b};
-                bit_eat(&br, 1);
-                scene.offsetx = bit_eat(&br, 32);
-                scene.offsety = bit_eat(&br, 32);
+                scene.visited = (u8)bit_eat(&br, 1);
+                scene.offsetx = bit_eat_float(&br);
+                scene.offsety = bit_eat_float(&br);
                 for(int i = 0; i<ArrayCount(JF04_table); i++)
                 {
                     arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, &br, (u32*)JF04_table));
@@ -727,7 +728,7 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
         {
             bit_push(b, bt.timer.base_enable, 1);
             bit_push(b, bt.timer.state, 8);
-            bit_push(b, bt.timer.seconds_left, 32);
+            bit_push_float(b, bt.timer.seconds_left);
             break;
         }
         case BASE_TYPE_SFX:
@@ -785,9 +786,9 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
 
 void bfbb_save_file_write_scene_block_stuff(bit_writer *bw, bfbb_save_file_block *block)
 {
-    bit_push(bw, 1, 1);
-    bit_push(bw, block->scene.offsetx, 32);
-    bit_push(bw, block->scene.offsety, 32);
+    bit_push(bw, block->scene.visited, 1);
+    bit_push_float(bw, block->scene.offsetx);
+    bit_push_float(bw, block->scene.offsety);
 }
 
 void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32 *table, write_buffer *b) {
@@ -851,6 +852,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 {
                     bit_push_s32(&bw, block->plyr.cutscene_played[i]);
                 }
+                bit_push(&bw, block->plyr.idiot_levels, 6);
                 b->size+=size_to_write;
             } break;
             CaseScene(&bw, block, HB01);
