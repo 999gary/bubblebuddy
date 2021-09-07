@@ -1203,6 +1203,7 @@ void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int 
     size_of_data = b->size;
     //TODO(Will): Figure out how to actually fucking do this :)
     u32 sfil_size = 0xc808 - size_of_data + 1036 + 8;
+    if (is_gci) sfil_size -= 0x6040; // NOTE(jelly): size of entire gci header.
     u32 sfil_bytes_used = 8;
     
     // TODO(jelly): remove if statement to only be what's in the else now that byteswapping is all done in bulk
