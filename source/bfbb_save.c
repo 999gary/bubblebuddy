@@ -86,11 +86,14 @@ typedef struct {
     u32 crc32_checksum;
 } bfbb_save_file_block_gdat;
 
+
+// TODO(jelly): figure out where thumbnail index actually goes...not sure this is right
 typedef struct {
     char game_label[64];
     s32 progress;
     char unknown_bytes[12];
-    s32 thumbnail_index;
+    u32 thumbnail_index;
+    char unknown_bytes_[4];
     char random_text[sizeof(BFBB_SAVE_FILE_LEDR_RANDOM_TEXT)-1];
 } bfbb_save_file_block_ledr;
 
@@ -213,7 +216,7 @@ typedef struct {
 } base_type_camerafly;
 
 typedef struct {
-    int id, type;
+    u32 id, type;
     union {
         base_type_trigger trigger;
         base_type_pickup pickup;
@@ -355,59 +358,26 @@ typedef struct {
 
 int bfbb_save_file_block_is_scene(bfbb_save_file_block *block) {
     static const u32 scene_fourccs[] = {
-        FOURCC_JF01,
-        FOURCC_JF02,
-        FOURCC_JF03,
-        FOURCC_JF04,
-        FOURCC_KF01,
-        FOURCC_KF02,
-        FOURCC_KF04,
-        FOURCC_KF05,
+        FOURCC_JF01, FOURCC_JF02, FOURCC_JF03, FOURCC_JF04,
+        FOURCC_KF01, FOURCC_KF02, FOURCC_KF04, FOURCC_KF05,
         FOURCC_MNU3,
-        FOURCC_RB01,
-        FOURCC_RB02,
-        FOURCC_RB03,
-        FOURCC_SM01,
-        FOURCC_SM02,
-        FOURCC_SM03,
-        FOURCC_SM04,
-        FOURCC_B101,
-        FOURCC_B201,
-        FOURCC_B302,
-        FOURCC_B303,
-        FOURCC_BB01,
-        FOURCC_BB02,
-        FOURCC_BB03,
-        FOURCC_BB04,
-        FOURCC_BC01,
-        FOURCC_BC02,
-        FOURCC_BC03,
-        FOURCC_BC04,
-        FOURCC_BC05,
-        FOURCC_DB01,
-        FOURCC_DB02,
-        FOURCC_DB03,
-        FOURCC_DB04,
-        FOURCC_DB06,
-        FOURCC_GL01,
-        FOURCC_GL02,
-        FOURCC_GL03,
-        FOURCC_GY01,
-        FOURCC_GY02,
-        FOURCC_GY03,
-        FOURCC_GY04,
-        FOURCC_HB00,
-        FOURCC_HB01,
-        FOURCC_HB02,
-        FOURCC_HB03,
-        FOURCC_HB04,
-        FOURCC_HB05,
-        FOURCC_HB06,
-        FOURCC_HB07,
-        FOURCC_HB08,
+        FOURCC_RB01, FOURCC_RB02, FOURCC_RB03,
+        FOURCC_SM01, FOURCC_SM02, FOURCC_SM03, FOURCC_SM04,
+        FOURCC_B101, FOURCC_B201, FOURCC_B302, FOURCC_B303,
+        FOURCC_BB01, FOURCC_BB02, FOURCC_BB03, FOURCC_BB04,
+        FOURCC_BC01, FOURCC_BC02, FOURCC_BC03, FOURCC_BC04, FOURCC_BC05,
+        FOURCC_DB01, FOURCC_DB02, FOURCC_DB03,
+        FOURCC_DB04, FOURCC_DB06,
+        FOURCC_GL01, FOURCC_GL02, FOURCC_GL03,
+        FOURCC_GY01, FOURCC_GY02, FOURCC_GY03, FOURCC_GY04,
+        FOURCC_HB00, FOURCC_HB01, FOURCC_HB02, 
+        FOURCC_HB03, FOURCC_HB04, FOURCC_HB05,
+        FOURCC_HB06, FOURCC_HB07, FOURCC_HB08,
         FOURCC_HB09,
         FOURCC_PG12,
     };
+    // TODO(jelly): is there REALLY no DB05??
+    
     u32 id = block->header.id;
     for (int i = 0; i < ArrayCount(scene_fourccs); i++) {
         if (id == scene_fourccs[i]) return 1;
@@ -448,6 +418,50 @@ unsigned char *eat_bytes(buffer *b, int count) {
     return result;
 }
 
+void eat_bytes_and_byteswap(buffer *b, int size) {
+    byteswap32_n(eat_bytes(b, size), size);
+}
+
+void eat_bf_padding(buffer *b) {
+    while (b->size > 0 && *(u8 *)peek_bytes(b, 1) == 0xbf) 
+        eat_bytes(b, 1);
+}
+
+// NOTE(jelly): in = 1 when reading in. in = 0 when writing out.
+void bfbb_save_file_byteswap(u8 *data, int size, int in) {
+    buffer b = {size, data};
+    int header_size = 12;
+    while (b.size >= 4) {
+        u32 id = *(u32 *)peek_bytes(&b, 4);
+        if (in) byteswap32(&id); 
+        switch (id) {
+            case FOURCC_LEDR: {
+                eat_bytes_and_byteswap(&b, header_size);
+                eat_bytes(&b, 64);
+                eat_bytes_and_byteswap(&b, 24);
+                eat_bytes(&b, sizeof(BFBB_SAVE_FILE_LEDR_RANDOM_TEXT)-1); // TODO(jelly): check the string???
+                eat_bf_padding(&b);
+            } break;
+            
+            case FOURCC_ROOM: {
+                eat_bytes_and_byteswap(&b, header_size);
+                eat_bytes(&b, 4); // NOTE(jelly): sceneid is a string, so it is NOT byteswapped!!!
+                eat_bf_padding(&b);
+            } break;
+            
+            case FOURCC_SFIL: {
+                eat_bytes_and_byteswap(&b, header_size);
+                eat_bytes(&b, 8);
+                eat_bytes_and_byteswap(&b, b.size/4*4);
+            } break;
+            
+            default: {
+                eat_bytes_and_byteswap(&b, 4);
+            }
+        }
+    }
+}
+
 void bfbb_save_file_free_blocks(bfbb_save_file *save_file) {
     int block_count = save_file->block_count;
     for (int i = 0; i < block_count; i++) {
@@ -463,16 +477,19 @@ bfbb_save_file_block_header bfbb_save_file_block_header_parse(buffer *b, int is_
     if (peek_bytes(b, sizeof(bfbb_save_file_block_header))) {
         result = *(bfbb_save_file_block_header *)eat_bytes(b, sizeof(bfbb_save_file_block_header));
     }
+    /*
     if (is_gci) {
         byteswap32(&result.id);
         byteswap32((u32 *)&result.block_size);
         byteswap32((u32 *)&result.bytes_used);
     }
+*/
     return result;
 }
 
 #define BFBB_SAVE_FILE_MAGIC_STRING "SPONGEBOB:WHENROBOTSATTACK::RyanNeilDan"
 
+/*
 // NOTE(jelly): this doesn't do the block header. maybe it should???
 void bfbb_save_file_block_byteswap(bfbb_save_file_block *new_block) {
     switch (new_block->header.id) {
@@ -498,6 +515,7 @@ void bfbb_save_file_block_byteswap(bfbb_save_file_block *new_block) {
         } break;
     }
 }
+*/
 
 int bfbb_save_file_looks_like_a_valid_header(bfbb_save_file_block_header *header) {
     int looks_like_a_valid_id = 1;
@@ -523,7 +541,7 @@ int bfbb_save_file_block_read(buffer *b, bfbb_save_file_block *new_block, int is
         if (!bytes) return -1;
         new_block->header = header;
         memcpy(new_block->raw_bytes, bytes, actual_bytes_used);
-        if (is_gci) bfbb_save_file_block_byteswap(new_block);
+        //if (is_gci) bfbb_save_file_block_byteswap(new_block);
         return 1;
     }
     return -1;
@@ -648,7 +666,7 @@ int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_sa
     //              and reading from scene while writing to it will be broken.
     bfbb_save_file_block_scene scene = {0};
     
-    if (save_file->is_big_endian) byteswap32_n(br->data, br->count);
+    //if (save_file->is_big_endian) byteswap32_n(br->data, br->count);
     
     scene.visited = bit_eat(br, 1);
     scene.offsetx = bit_eat_float(br);
@@ -828,6 +846,8 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
             // TODO(jelly): ??? do we honestly care if it's not right?
         }
 */
+        
+        bfbb_save_file_byteswap(b.bytes, b.size, 1);
     }
     
     rc = bfbb_save_file_block_read(&b, &gdat, is_gci);
@@ -862,12 +882,14 @@ void bfbb_save_file_set_gdat_block(bfbb_save_file_block *block, int file_size, u
     block->header.bytes_used = file_size;
     block->gdat.crc32_checksum = crc32_checksum;
     
+    /*
     if (is_gci) {
         byteswap32(&block->header.id);
         byteswap32((u32 *)&block->header.block_size);
         byteswap32((u32 *)&block->header.bytes_used);
         byteswap32(&block->gdat.crc32_checksum);
     }
+*/
 }
 
 typedef struct {
@@ -1024,7 +1046,7 @@ void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32
     unsigned char *data = b->bytes + b->size;
     int n = block->header.bytes_used;
     b->size += n;
-    if (is_big_endian) byteswap32_n(data, n);
+    //if (is_big_endian) byteswap32_n(data, n);
 }
 
 #define CaseSceneWrite(bw, block, b, is_gci, fourcc) case FOURCC_##fourcc: bfbb_save_file_write_scene(bw, block, (u32*)fourcc##_table, b, is_gci); break;
@@ -1048,6 +1070,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     */
     bfbb_save_file_block *result = 0;
     
+    /*
     if (is_gci) {
         bfbb_save_file_block_byteswap(block);
         // NOTE(jelly): we need to byteswap the id AFTER because
@@ -1056,18 +1079,10 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
         byteswap32((u32 *)&block->header.block_size);
         byteswap32((u32 *)&block->header.bytes_used);
     }
+    */
     
     result = (bfbb_save_file_block *)(b->bytes + b ->size);
     write_bytes(b, (unsigned char *)&block->header, sizeof(block->header));
-
-    if (is_gci) {
-        bfbb_save_file_block_byteswap(block);
-        // NOTE(jelly): we need to byteswap the id AFTER because
-        //              bfbb_save_file_block_byteswap() needs to read the id in LE.
-        byteswap32(&block->header.id);
-        byteswap32((u32 *)&block->header.block_size);
-        byteswap32((u32 *)&block->header.bytes_used);
-    }
     
     {
         bit_writer bw = {b->max_size - b->size, b->bytes + b->size};
@@ -1163,7 +1178,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 }
                 bit_push(&bw, block->cntr.reminder_sock_cntr, 16);
                 bit_push_s32(&bw, block->cntr.cheats);
-                if (is_gci) byteswap32_n(b->bytes+b->size, block->header.bytes_used);
+                //if (is_gci) byteswap32_n(b->bytes+b->size, block->header.bytes_used);
                 b->size+=size_to_write;
                 break;
             }
@@ -1175,6 +1190,10 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     return result;
 }
 
+// TODO(jelly): rename bfbb_save_file_append_block (and other functions) because ppl might get confused 
+//              and think that they append a block to a bfbb_save_file struct when they're really
+//              just for writing the blocks to a buffer.
+
 void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int is_gci) {
     int size_of_data = 0;
     for(int i = 0; i<save_file->block_count; i++)
@@ -1183,15 +1202,17 @@ void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int 
     }
     size_of_data = b->size;
     //TODO(Will): Figure out how to actually fucking do this :)
-    u32 sfil_size = 0xc808 - size_of_data + 1036;
+    u32 sfil_size = 0xc808 - size_of_data + 1036 + 8;
     u32 sfil_bytes_used = 8;
     
+    // TODO(jelly): remove if statement to only be what's in the else now that byteswapping is all done in bulk
+    is_gci = 0;
     if (is_gci) {
         unsigned char sfil_id[] = {
             0x53, 0x46, 0x49, 0x4C
         };
-        byteswap32(&sfil_size);
-        byteswap32(&sfil_bytes_used);
+        //byteswap32(&sfil_size);
+        //byteswap32(&sfil_bytes_used);
         write_bytes(b, sfil_id, sizeof(sfil_id));
     } else {
         unsigned char sfil_id[] = {
@@ -1200,12 +1221,11 @@ void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int 
         write_bytes(b, sfil_id, sizeof(sfil_id));
     }
     write_bytes(b, (unsigned char *)&sfil_size, sizeof(sfil_size));
-    if(is_gci)
-        byteswap32(&sfil_size);
+    //if(is_gci) byteswap32(&sfil_size);
     write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
     write_bytes(b, (unsigned char *)"RyanNeil", 8);
     
-    bfbb_save_file_append_padding(b, sfil_size);
+    bfbb_save_file_append_padding(b, sfil_size - 8);
 }
 
 int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is_gci) {
@@ -1245,6 +1265,8 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
     checksum = crc32_get_checksum((char *)gdat + 16, file_size - 16);
     
     bfbb_save_file_set_gdat_block(gdat, file_size, checksum, is_gci);
+    
+    if (is_gci) bfbb_save_file_byteswap((u8 *)gdat, file_size, 0);
     
     if (is_gci) {
         write_byte_n_times(&b, 0, 0x14040 - b.size);
