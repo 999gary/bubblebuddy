@@ -466,9 +466,12 @@ void bfbb_save_file_byteswap(u8 *data, int size, int in) {
             default: {
                 if (bfbb_save_file_fourcc_is_bit_block(id)) {
                     eat_bytes_and_byteswap(&b, 4);
-                    u32 size = *(u32 *)eat_bytes_and_byteswap(&b, 4);
+                    u32 block_size;
+                    // TODO(jelly): ???
+                    if (0) block_size = *(u32 *)eat_bytes_and_byteswap(&b, 4);
+                    else    block_size = *(u32 *)eat_bytes(&b, 4);
                     eat_bytes_and_byteswap(&b, 4);
-                    eat_bytes(&b, size);
+                    eat_bytes(&b, block_size);
                 }
                 else eat_bytes_and_byteswap(&b, 4);
             }
