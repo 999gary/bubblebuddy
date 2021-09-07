@@ -356,7 +356,7 @@ typedef struct {
 #define FOURCC_SVID FOURCC_CONST('S', 'V', 'I', 'D')
 #define FOURCC_SFIL FOURCC_CONST('S', 'F', 'I', 'L')
 
-int bfbb_save_file_block_is_scene(bfbb_save_file_block *block) {
+int bfbb_save_file_fourcc_is_scene(u32 id) {
     static const u32 scene_fourccs[] = {
         FOURCC_JF01, FOURCC_JF02, FOURCC_JF03, FOURCC_JF04,
         FOURCC_KF01, FOURCC_KF02, FOURCC_KF04, FOURCC_KF05,
@@ -377,12 +377,18 @@ int bfbb_save_file_block_is_scene(bfbb_save_file_block *block) {
         FOURCC_PG12,
     };
     // TODO(jelly): is there REALLY no DB05??
-    
-    u32 id = block->header.id;
     for (int i = 0; i < ArrayCount(scene_fourccs); i++) {
         if (id == scene_fourccs[i]) return 1;
     }
     return 0;
+}
+
+int bfbb_save_file_block_is_scene(bfbb_save_file_block *block) {
+    return bfbb_save_file_fourcc_is_scene(block->header.id);
+}
+
+int bfbb_save_file_fourcc_is_bit_block(u32 id) {
+    return id == FOURCC_PLYR || id == FOURCC_CNTR || bfbb_save_file_fourcc_is_scene(id);
 }
 
 void byteswap32(u32 *p) {
@@ -418,8 +424,10 @@ unsigned char *eat_bytes(buffer *b, int count) {
     return result;
 }
 
-void eat_bytes_and_byteswap(buffer *b, int size) {
-    byteswap32_n(eat_bytes(b, size), size);
+u8 *eat_bytes_and_byteswap(buffer *b, int size) {
+    u8 *result = eat_bytes(b, size);
+    if (result)byteswap32_n(result, size);
+    return result;
 }
 
 void eat_bf_padding(buffer *b) {
@@ -433,7 +441,7 @@ void bfbb_save_file_byteswap(u8 *data, int size, int in) {
     int header_size = 12;
     while (b.size >= 4) {
         u32 id = *(u32 *)peek_bytes(&b, 4);
-        if (in) byteswap32(&id); 
+        if (in) byteswap32(&id);
         switch (id) {
             case FOURCC_LEDR: {
                 eat_bytes_and_byteswap(&b, header_size);
@@ -456,7 +464,13 @@ void bfbb_save_file_byteswap(u8 *data, int size, int in) {
             } break;
             
             default: {
-                eat_bytes_and_byteswap(&b, 4);
+                if (bfbb_save_file_fourcc_is_bit_block(id)) {
+                    eat_bytes_and_byteswap(&b, 4);
+                    u32 size = *(u32 *)eat_bytes_and_byteswap(&b, 4);
+                    eat_bytes_and_byteswap(&b, 4);
+                    eat_bytes(&b, size);
+                }
+                else eat_bytes_and_byteswap(&b, 4);
             }
         }
     }
@@ -1203,7 +1217,7 @@ void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int 
     size_of_data = b->size;
     //TODO(Will): Figure out how to actually fucking do this :)
     u32 sfil_size = 0xc808 - size_of_data + 1036 + 8;
-    //if (is_gci) sfil_size -= 0x6040; // NOTE(jelly): size of entire gci header.
+    //if (is_gci) sfil_size -= 0x6040; // NOTE(jelly): size of entire gci header
     u32 sfil_bytes_used = 8;
     
     // TODO(jelly): remove if statement to only be what's in the else now that byteswapping is all done in bulk
