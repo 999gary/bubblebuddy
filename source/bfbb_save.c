@@ -466,12 +466,12 @@ void bfbb_save_file_byteswap(u8 *data, int size, int in) {
             default: {
                 if (bfbb_save_file_fourcc_is_bit_block(id)) {
                     eat_bytes_and_byteswap(&b, 4);
-                    u32 block_size;
-                    // TODO(jelly): ???
-                    if (0) block_size = *(u32 *)eat_bytes_and_byteswap(&b, 4);
-                    else    block_size = *(u32 *)eat_bytes(&b, 4);
+                    u32 *block_size;
+                    if (in) block_size = (u32 *)eat_bytes_and_byteswap(&b, 4);
+                    else    block_size = (u32 *)eat_bytes(&b, 4);
                     eat_bytes_and_byteswap(&b, 4);
-                    eat_bytes(&b, block_size);
+                    eat_bytes(&b, *block_size);
+                    if (!in) byteswap32(block_size);
                 }
                 else eat_bytes_and_byteswap(&b, 4);
             }
@@ -710,7 +710,7 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
     for(int i = 0; i<save_file->block_count; i++)
     {
         bfbb_save_file_block* block = &save_file->blocks[i];
-        bit_buffer b = {block->header.bytes_used, block->raw_bytes};
+        bit_buffer b = {block->header.bytes_used, block->raw_bytes, 0, save_file->is_big_endian};
         bit_reader br = b;
         switch(block->header.id)
         {
@@ -1102,7 +1102,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     write_bytes(b, (unsigned char *)&block->header, sizeof(block->header));
     
     {
-        bit_writer bw = {b->max_size - b->size, b->bytes + b->size};
+        bit_writer bw = {b->max_size - b->size, b->bytes + b->size, 0, is_gci};
         switch (block->header.id) {
             case FOURCC_PLYR: {
                 bit_push(&bw, 1, 1);
