@@ -10,14 +10,15 @@ TODO(jelly): STATE OF THE PROGRAM
 -THE GUI FUCKING SUCKS, FUCKING FIX IT
  -PLYR block is broken
 -SFIL block is broken
--Gamecube 'writing out' is broken (it's prob all broken tbh) - its not but you know how jelly is :)
 -Add a load file button - fixed (almost)
  -I can't type anything in the ROOM thing - fixed
 -Stop clamping things please lemme finish the game at like 100000% - fixed (mostly outside of things that will break)
--The S block is wrong - What?
 -Port to linux
 -Port to emscripten
 -just generally clean up the code it's pretty garbage
+
+
+-RB03 block is broken on xbox??
 
 */
 
@@ -241,9 +242,9 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
                 nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
                 nk_checkbox_label(cv->nk_ctx, "Shown", &c);
-                                    
+                
                 b->trigger.base_enable = a;
-                b->trigger.show_ent = c;    
+                b->trigger.show_ent = c;
                 break;         
             }
             case(BASE_TYPE_PICKUP):
@@ -273,7 +274,7 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                     nk_checkbox_label(cv->nk_ctx, buffer, &flag[i]);
                     memset(buffer, 0, 128);
                 }
-           
+                
                 b->pickup.base_enable = a;
                 b->pickup.show_ent = c;
                 b->pickup.state = flag[0] | flag[1] << 1 | flag[2] << 2 | flag[3] << 3 | flag[4] << 4 | flag[5] << 5 | flag[6] << 6 | flag[7] << 7;
@@ -288,13 +289,13 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 s32 state = b->timer.state;
                 f32 sl = b->timer.seconds_left;
                 a = b->timer.base_enable;
-
+                
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
                 nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
                 nk_property_int(cv->nk_ctx, "State", 0, &state, 255, 1, 1);
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                 nk_property_float(cv->nk_ctx, "Seconds Left", 0.0f, &sl, 500.0f, .5f, .5f);
-
+                
                 b->timer.base_enable = a;
                 b->timer.seconds_left = sl;
                 b->timer.state = state;
@@ -306,11 +307,11 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "ID: %x", b->id);
                 nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Type: %x", b->type);
                 nk_bool a;
-                s16 counter = b->counter.count;
+                s32 counter = b->counter.count;
                 //printf("%x\n", b->pickup.state);
                 s32 state = (s32)b->counter.state;
                 
-               
+                
                 a = b->counter.base_enable;
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
                 nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
@@ -318,7 +319,7 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                 nk_property_int(cv->nk_ctx, "Counter", INT16_MIN, &counter, INT16_MAX, 1, 1);
                 
-
+                
                 b->counter.base_enable = a;
                 b->counter.count = counter;
                 b->counter.state = (u8)state;
@@ -329,7 +330,7 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
                 nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "ID: %x", b->id);
                 nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Type: %x", b->type);
-
+                
                 nk_bool a;
                 a = b->dispatcher.base_enable;
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
@@ -350,10 +351,10 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
             }
             default:
             {
-                #if 0
+#if 0
                 printf("Unknown base type %d\n", b->type);
                 assert(0);
-                #endif
+#endif
             }
         }
     }
@@ -411,10 +412,10 @@ void hit_s1_data(hit_main *cv)
         int kj = 0;
         for(int i = 0; i < block_count; i++)
         {
-            #if 1
+#if 1
             if(is_drawable_block(&save_file->blocks[i]))
                 continue;
-            #endif
+#endif
             if(!(kj%3))
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3, 3);
             kj++;
@@ -477,7 +478,7 @@ void hit_s1_data(hit_main *cv)
                     }
                     case(FOURCC_PLYR):
                     {
-
+                        
                         nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                         nk_property_int(cv->nk_ctx, "Max Health", 0, &blocks[i].plyr.max_health, 6, 1, 1);
                         nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);

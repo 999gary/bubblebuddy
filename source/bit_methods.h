@@ -104,16 +104,17 @@ u32 bit_reader_gc_read_bit(bit_writer *b) {
     }
     
     u32 *p = (u32 *)b->data;
-    u32 n = bit_gc_tab0[b->bitidx];
+    
+    u32 n = bit_gc_tab0[b->bitidx++];
     u32 m = p[b->curele];
-    b->bitidx++;
     m &= n;
     if (b->bitidx == 32) {
         b->curele++;
         b->bitidx = 0;
     }
     b->at++;
-    return (-m | m) >> 0x1f;
+    //return (-m | m) >> 0x1f;
+    return m != 0; // ???
 }
 
 void bit_reader_gc_read(bit_reader *b, u8 *buf, s32 elesize, s32 n) {
@@ -126,39 +127,33 @@ void bit_reader_gc_read(bit_reader *b, u8 *buf, s32 elesize, s32 n) {
     }
     if (n < 0) {
         u32 *p = (u32 *)buf;
-        s32 i = 0;
-        s32 j = 0;
-        while (j < count) {
-            if (bit_reader_gc_read_bit(b) == 0) {
-                *p &= bit_gc_tab1[i];
+        s32 atbit = 0;
+        for (s32 i = 0; i < count; i++) {
+            if (bit_reader_gc_read_bit(b)) {
+                *p |= bit_gc_tab0[atbit++];
             }
             else {
-                *p |= bit_gc_tab0[i];
+                *p &= bit_gc_tab1[atbit++];
             }
-            i++;
-            if (i == 32) {
-                i = 0;
+            if (atbit == 32) {
+                atbit = 0;
                 p++;
             }
-            j++;
         }
     }
     else {
-        s32 j = 0;
-        s32 i = 0;
-        while (i < count) {
-            if (bit_reader_gc_read_bit(b) == 0) {
-                *buf &= (bit_gc_tab1[j]) & 0xff;
+        s32 atbit = 0;
+        for (s32 i = 0; i < count; i++) {
+            if (bit_reader_gc_read_bit(b)) {
+                *buf |= (u8)(bit_gc_tab0[atbit++]);
             }
             else {
-                *buf |= (bit_gc_tab0[j]) & 0xff;
+                *buf &= (u8)(bit_gc_tab1[atbit++]);
             }
-            j++;
-            if (j == 8) {
-                j = 0;
+            if (atbit == 8) {
+                atbit = 0;
                 buf++;
             }
-            i++;
         }
     }
 }
@@ -179,11 +174,9 @@ void bit_writer_gc_write_bit(bit_writer *b, u32 bit) {
         b->bitidx = 0;
     }
     b->at++;
-    return;
 }
 
 void bit_writer_gc_write(bit_writer *b, u8 *data, s32  elesize, s32 n) {
-    u32 *p = (u32 *)data;
     s32 count;
     if (n == 0) {
         count = 0;
@@ -196,29 +189,24 @@ void bit_writer_gc_write(bit_writer *b, u8 *data, s32  elesize, s32 n) {
             count = n * elesize * 8;
         }
         if (n < 0) {
-            s32 i = 0;
-            s32 j = 0;
-            while (j < count) {
-                bit_writer_gc_write_bit(b, *p & bit_gc_tab0[i]);
-                i++;
-                if (i == 32) {
-                    i = 0;
+            u32 *p = (u32 *)data;
+            s32 atbit = 0;
+            for (s32 i = 0; i < count; i++) {
+                bit_writer_gc_write_bit(b, *p & bit_gc_tab0[atbit++]);
+                if (atbit == 32) {
+                    atbit = 0;
                     p++;
                 }
-                j++;
             }
         }
         else {
-            s32 j = 0;
-            s32 i = 0;
-            while (i < count) {
-                bit_writer_gc_write_bit(b, data[0] & bit_gc_tab0[j]);
-                j++;
-                if (j == 8) {
-                    j = 0;
+            s32 atbit = 0;
+            for (s32 i = 0; i < count; i++) {
+                bit_writer_gc_write_bit(b, *data & bit_gc_tab0[atbit++]);
+                if (atbit == 8) {
+                    atbit = 0;
                     data++;
                 }
-                i++;
             }
         }
     }
@@ -260,20 +248,46 @@ u64 bit_peek(bit_reader *reader, u32 count) {
 u64 bit_eat(bit_reader *reader, u32 count) {
     u64 result = 0;
     if (reader->using_messed_up_gamecube_serializer) {
-        u32 n[2];
         switch (count) {
-            case 1:  bit_reader_gc_read(reader, (u8 *)&n, 4, -1);                        break;
-            case 8:  bit_reader_gc_read(reader, (u8 *)&n, 1, 1);                         break;
-            case 16: bit_reader_gc_read(reader, (u8 *)&n, 2, 1);  byteswap16((u16 *)&n); break;
-            case 32: bit_reader_gc_read(reader, (u8 *)&n, 4, 1);  byteswap32(&n);        break;
+            case 1:  { 
+                u32 bits = 0;
+                bit_reader_gc_read(reader, (u8 *)&bits, sizeof(bits), -1);
+                result = bits;
+            } break;
+            case 8:  { 
+                u8 bits = 0;
+                bit_reader_gc_read(reader, (u8 *)&bits, sizeof(bits), 1);
+                result = bits;
+            } break;
+            case 16: {
+                u16 bits = 0;
+                bit_reader_gc_read(reader, (u8 *)&bits, sizeof(bits), 1);  
+                byteswap16(&bits);
+                result = bits;
+            } break;
+            case 32: {
+                u32 bits = 0;
+                bit_reader_gc_read(reader, (u8 *)&bits, sizeof(bits), 1);  
+                byteswap32(&bits);
+                result = bits;
+            } break;
             
             // TODO(jelly): verify that this is right??
-            case 6: bit_reader_gc_read(reader, (u8 *)&n, 4, -6); break;
-            case 7: bit_reader_gc_read(reader, (u8 *)&n, 4, -7); break;
+            //              ask will for the 6-bit read call
+            case 6: {
+                u32 bits = 0;
+                bit_reader_gc_read(reader, (u8 *)&bits, sizeof(bits), -6); 
+                result = bits;
+            } break;
+            
+            case 7: {
+                u32 bits = 0;
+                bit_reader_gc_read(reader, (u8 *)&bits, sizeof(bits), -7);
+                result = bits;
+            } break;
             
             default: assert(!"INVALID `COUNT` PASSED TO BIT READER IN GAMECUBE MODE");
         }
-        result = n[0];
     } else {
         result = bit_peek(reader, count);
         reader->at += count;
@@ -296,19 +310,36 @@ void bit_writer_safe_or(bit_writer *b, int index, unsigned char v) {
 }
 
 int bit_push(bit_writer *b, u64 bits, u32 count) {
-    bits &= ((1ULL << count)-1);
     if (b->using_messed_up_gamecube_serializer) {
-        u32 n[2];
-        n[0] = bits;
         switch (count) {
-            case 1:                         bit_writer_gc_write(b, (u8 *)&n, 4, -1); break;
-            case 8:                         bit_writer_gc_write(b, (u8 *)&n, 1,  1); break;
-            case 16: byteswap16((u16 *)&n); bit_writer_gc_write(b, (u8 *)&n, 2,  1); break;
-            case 32: byteswap32(&n);        bit_writer_gc_write(b, (u8 *)&n, 4,  1); break;
+            case 1: {
+                u32 n = bits;
+                bit_writer_gc_write(b, (u8 *)&n, sizeof(n), -1); 
+            } break;
+            case 8:  {
+                u8 n = bits;
+                bit_writer_gc_write(b, (u8 *)&n, sizeof(n),  1); 
+            } break;
+            case 16: {
+                u16 n = bits;
+                byteswap16(&n); 
+                bit_writer_gc_write(b, (u8 *)&n, sizeof(n),  1); 
+            } break;
+            case 32: {
+                u32 n = bits;
+                byteswap32(&n);
+                bit_writer_gc_write(b, (u8 *)&n, sizeof(n),  1); 
+            } break;
             
             // TODO(jelly): verify that this is right??
-            case 6: bit_writer_gc_write(b, (u8 *)&n, 4, -6); break;
-            case 7: bit_writer_gc_write(b, (u8 *)&n, 4, -7); break;
+            case 6: {
+                u32 n = bits;
+                bit_writer_gc_write(b, (u8 *)&n, sizeof(n), -6); 
+            } break;
+            case 7: {
+                u32 n = bits;
+                bit_writer_gc_write(b, (u8 *)&n, sizeof(n), -7); 
+            } break;
             
             default: assert(!"INVALID `COUNT` PASSED TO BIT WRITER IN GAMECUBE MODE");
         }
