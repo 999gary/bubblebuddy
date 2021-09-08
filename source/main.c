@@ -1,4 +1,5 @@
 #include "types.h"
+#include "byteswap.h"
 #include "config.h"
 #include "bit_methods.h"
 

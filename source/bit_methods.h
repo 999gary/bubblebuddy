@@ -184,7 +184,7 @@ void bit_writer_gc_write_bit(bit_writer *b, u32 bit) {
 
 void bit_writer_gc_write(bit_writer *b, u8 *data, s32  elesize, s32 n) {
     u32 *p = (u32 *)data;
-    int count;
+    s32 count;
     if (n == 0) {
         count = 0;
     }
@@ -257,17 +257,15 @@ u64 bit_peek(bit_reader *reader, u32 count) {
     return bits & ((1ULL << count) - 1);
 }
 
-// TODO(jelly): replace byteswaps with portable byteswaps for linux and stuff
-//              i.e. make a little byteswap header or something
 u64 bit_eat(bit_reader *reader, u32 count) {
     u64 result = 0;
     if (reader->using_messed_up_gamecube_serializer) {
         u32 n;
         switch (count) {
-            case 1:  bit_reader_gc_read(reader, (u8 *)&n, 4, -1);                          break;
-            case 8:  bit_reader_gc_read(reader, (u8 *)&n, 1, 1);                           break;
-            case 16: bit_reader_gc_read(reader, (u8 *)&n, 2, 1);  n = _byteswap_ushort(n); break;
-            case 32: bit_reader_gc_read(reader, (u8 *)&n, 4, 1);  n = _byteswap_ulong (n); break;
+            case 1:  bit_reader_gc_read(reader, (u8 *)&n, 4, -1);                        break;
+            case 8:  bit_reader_gc_read(reader, (u8 *)&n, 1, 1);                         break;
+            case 16: bit_reader_gc_read(reader, (u8 *)&n, 2, 1);  byteswap16((u16 *)&n); break;
+            case 32: bit_reader_gc_read(reader, (u8 *)&n, 4, 1);  byteswap32(&n);        break;
             
             // TODO(jelly): verify that this is right??
             case 6: bit_reader_gc_read(reader, (u8 *)&n, 4, -6); break;
@@ -302,10 +300,10 @@ int bit_push(bit_writer *b, u64 bits, u32 count) {
     if (b->using_messed_up_gamecube_serializer) {
         u32 n = bits;
         switch (count) {
-            case 1:                           bit_writer_gc_write(b, (u8 *)&n, 4, -1); break;
-            case 8:                           bit_writer_gc_write(b, (u8 *)&n, 1,  1); break;
-            case 16: n = _byteswap_ushort(n); bit_writer_gc_write(b, (u8 *)&n, 2,  1); break;
-            case 32: n = _byteswap_ulong (n); bit_writer_gc_write(b, (u8 *)&n, 4,  1); break;
+            case 1:                         bit_writer_gc_write(b, (u8 *)&n, 4, -1); break;
+            case 8:                         bit_writer_gc_write(b, (u8 *)&n, 1,  1); break;
+            case 16: byteswap16((u16 *)&n); bit_writer_gc_write(b, (u8 *)&n, 2,  1); break;
+            case 32: byteswap32(&n);        bit_writer_gc_write(b, (u8 *)&n, 4,  1); break;
             
             // TODO(jelly): verify that this is right??
             case 6: bit_writer_gc_write(b, (u8 *)&n, 4, -6); break;

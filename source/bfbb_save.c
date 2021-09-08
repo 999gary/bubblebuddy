@@ -391,14 +391,6 @@ int bfbb_save_file_fourcc_is_bit_block(u32 id) {
     return id == FOURCC_PLYR || id == FOURCC_CNTR || bfbb_save_file_fourcc_is_scene(id);
 }
 
-void byteswap32(u32 *p) {
-    u32 n = *p;
-    *p = (((n &       0xff) << 24) |
-          ((n &     0xff00) <<  8) |
-          ((n &   0xff0000) >>  8) |
-          ((n & 0xff000000) >> 24));
-}
-
 void byteswap32_n(u8 *data, int count) {
     assert(count % 4 ==0);
     for (int i = 0; i < count; i += 4) {
