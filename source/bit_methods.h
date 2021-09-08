@@ -260,7 +260,7 @@ u64 bit_peek(bit_reader *reader, u32 count) {
 u64 bit_eat(bit_reader *reader, u32 count) {
     u64 result = 0;
     if (reader->using_messed_up_gamecube_serializer) {
-        u32 n;
+        u32 n[2];
         switch (count) {
             case 1:  bit_reader_gc_read(reader, (u8 *)&n, 4, -1);                        break;
             case 8:  bit_reader_gc_read(reader, (u8 *)&n, 1, 1);                         break;
@@ -273,7 +273,7 @@ u64 bit_eat(bit_reader *reader, u32 count) {
             
             default: assert(!"INVALID `COUNT` PASSED TO BIT READER IN GAMECUBE MODE");
         }
-        result = n;
+        result = n[0];
     } else {
         result = bit_peek(reader, count);
         reader->at += count;
@@ -298,7 +298,8 @@ void bit_writer_safe_or(bit_writer *b, int index, unsigned char v) {
 int bit_push(bit_writer *b, u64 bits, u32 count) {
     bits &= ((1ULL << count)-1);
     if (b->using_messed_up_gamecube_serializer) {
-        u32 n = bits;
+        u32 n[2];
+        n[0] = bits;
         switch (count) {
             case 1:                         bit_writer_gc_write(b, (u8 *)&n, 4, -1); break;
             case 8:                         bit_writer_gc_write(b, (u8 *)&n, 1,  1); break;

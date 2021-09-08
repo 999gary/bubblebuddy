@@ -3,6 +3,23 @@
 #include "byteswap.h"
 #include "bit_methods.h"
 
+/*
+
+TODO(jelly): STATE OF THE PROGRAM
+--------------------------------------
+ -PLYR block is broken
+-SFIL block is broken
+-Gamecube 'writing out' is broken (it's prob all broken tbh)
+-Add a load file button 
+ -I can't type anything in the ROOM thing
+-Stop clamping things please lemme finish the game at like 100000%
+-The S block is wrong
+-Port to linux
+-Port to emscripten
+-just generally clean up the code it's pretty garbage
+
+*/
+
 #define ArrayCount(arr) (sizeof(arr)/sizeof((arr)[0]))
 
 #ifdef _WIN32
@@ -204,7 +221,7 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                 nk_checkbox_label(cv->nk_ctx, "Shown", &c);
-                                    
+                
                 b->trigger.base_enable = a;
                 b->trigger.show_ent = c;    
                 break;         
@@ -237,7 +254,7 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                     nk_checkbox_label(cv->nk_ctx, buffer, &flag[i]);
                     memset(buffer, 0, 128);
                 }
-           
+                
                 b->pickup.base_enable = a;
                 b->pickup.show_ent = c;
                 b->pickup.state = flag[0] | flag[1] << 1 | flag[2] << 2 | flag[3] << 3 | flag[4] << 4 | flag[5] << 5 | flag[6] << 6 | flag[7] << 7;
@@ -245,10 +262,10 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
             }
             default:
             {
-                #if 0
+#if 0
                 printf("Unknown base type %d\n", b->type);
                 assert(0);
-                #endif
+#endif
             }
         }
     }
