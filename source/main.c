@@ -7,13 +7,14 @@
 
 TODO(jelly): STATE OF THE PROGRAM
 --------------------------------------
+-THE GUI FUCKING SUCKS, FUCKING FIX IT
  -PLYR block is broken
 -SFIL block is broken
--Gamecube 'writing out' is broken (it's prob all broken tbh)
--Add a load file button 
- -I can't type anything in the ROOM thing
--Stop clamping things please lemme finish the game at like 100000%
--The S block is wrong
+-Gamecube 'writing out' is broken (it's prob all broken tbh) - its not but you know how jelly is :)
+-Add a load file button - fixed (almost)
+ -I can't type anything in the ROOM thing - fixed
+-Stop clamping things please lemme finish the game at like 100000% - fixed (mostly outside of things that will break)
+-The S block is wrong - What?
 -Port to linux
 -Port to emscripten
 -just generally clean up the code it's pretty garbage
@@ -79,6 +80,26 @@ unsigned char *read_entire_file(char *path, int *size) {
         *size = n;
     }
     return result;
+}
+
+void hit_load_save(hit_main *cv)
+{
+    bfbb_save_file_free_blocks(&cv->save_file);
+    char buffer[PATH_BUFFER_SIZE];
+    if(!hit_file_select_read(buffer, PATH_BUFFER_SIZE))
+    {
+        FILE *in = fopen(buffer, "rb");
+        if (in) {
+            int size = 0;
+            unsigned char *data = read_entire_file(buffer, &size);
+            bfbb_save_file save_file;
+            if (!bfbb_save_file_read(&cv->save_file, data, size)) {
+                // TODO(jelly): the file couldn't be parsed properly: TELL THE USER OR SOMETHING !!!
+            }
+            cv->save_file_is_loaded = 1;
+        }
+        memcpy(cv->s1_fpath, buffer, 4096);
+    }
 }
 
 /*-------------------------------------------
@@ -189,14 +210,14 @@ char* thumbnail_label_from_id(int32_t id)
     return lookup[id];
 }
 
-u32 drawable_block_ids[] = {
-    FOURCC_PLYR, FOURCC_LEDR, FOURCC_ROOM, FOURCC_HB02, FOURCC_CNTR
+u32 non_drawable_block_ids[] = {
+    FOURCC_SVID
 };
 
 int is_drawable_block(bfbb_save_file_block *block) {
     u32 id = block->header.id;
-    for (int i = 0; i < ArrayCount(drawable_block_ids); i++) {
-        if (id == drawable_block_ids[i]) return 1;
+    for (int i = 0; i < ArrayCount(non_drawable_block_ids); i++) {
+        if (id == non_drawable_block_ids[i]) return 1;
     }
     return 0;
 }
@@ -217,11 +238,10 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 nk_bool a, c;
                 a = b->trigger.base_enable;
                 c = b->trigger.show_ent;
-                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
                 nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
-                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                 nk_checkbox_label(cv->nk_ctx, "Shown", &c);
-                
+                                    
                 b->trigger.base_enable = a;
                 b->trigger.show_ent = c;    
                 break;         
@@ -234,7 +254,7 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 nk_bool a, c;
                 nk_bool flag[7];
                 //printf("%x\n", b->pickup.state);
-                u32 state = b->pickup.state;
+                u8 state = b->pickup.state;
                 for(int i = 0; i<7; i++)
                 {
                     flag[i] = state & 1;
@@ -242,9 +262,8 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 }
                 a = b->pickup.base_enable;
                 c = b->pickup.show_ent;
-                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
                 nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
-                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                 nk_checkbox_label(cv->nk_ctx, "Shown", &c);
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 4);
                 char buffer[128];
@@ -254,22 +273,93 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                     nk_checkbox_label(cv->nk_ctx, buffer, &flag[i]);
                     memset(buffer, 0, 128);
                 }
-                
+           
                 b->pickup.base_enable = a;
                 b->pickup.show_ent = c;
                 b->pickup.state = flag[0] | flag[1] << 1 | flag[2] << 2 | flag[3] << 3 | flag[4] << 4 | flag[5] << 5 | flag[6] << 6 | flag[7] << 7;
                 break;
             }
+            case(BASE_TYPE_TIMER):
+            {
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "ID: %x", b->id);
+                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Type: %x", b->type);
+                nk_bool a;
+                s32 state = b->timer.state;
+                f32 sl = b->timer.seconds_left;
+                a = b->timer.base_enable;
+
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
+                nk_property_int(cv->nk_ctx, "State", 0, &state, 255, 1, 1);
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                nk_property_float(cv->nk_ctx, "Seconds Left", 0.0f, &sl, 500.0f, .5f, .5f);
+
+                b->timer.base_enable = a;
+                b->timer.seconds_left = sl;
+                b->timer.state = state;
+                break;
+            }
+            case(BASE_TYPE_COUNTER):
+            {
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "ID: %x", b->id);
+                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Type: %x", b->type);
+                nk_bool a;
+                s16 counter = b->counter.count;
+                //printf("%x\n", b->pickup.state);
+                s32 state = (s32)b->counter.state;
+                
+               
+                a = b->counter.base_enable;
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
+                nk_property_int(cv->nk_ctx, "State", 0, &state, 6, 1, 1);
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                nk_property_int(cv->nk_ctx, "Counter", INT16_MIN, &counter, INT16_MAX, 1, 1);
+                
+
+                b->counter.base_enable = a;
+                b->counter.count = counter;
+                b->counter.state = (u8)state;
+                break;
+            }
+            case(BASE_TYPE_DISPATCHER):
+            {
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "ID: %x", b->id);
+                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Type: %x", b->type);
+
+                nk_bool a;
+                a = b->dispatcher.base_enable;
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
+                b->dispatcher.base_enable = a;
+                break;
+            }
+            case(BASE_TYPE_TASKBOX):
+            {
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "ID: %x", b->id);
+                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Type: %x", b->type);
+                s32 state = b->taskbox.state;
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                nk_property_int(cv->nk_ctx, "State", 0, &state, 6, 1, 1);
+                b->taskbox.state = state;
+                break;
+            }
             default:
             {
-#if 0
+                #if 0
                 printf("Unknown base type %d\n", b->type);
                 assert(0);
-#endif
+                #endif
             }
         }
     }
 }
+
+#define CaseSceneDisplay(cv, i, win_height, fourcc) case FOURCC_##fourcc: hit_s1_scene_switch(cv, i, win_height); break;
 
 void hit_s1_data(hit_main *cv)
 {
@@ -321,9 +411,10 @@ void hit_s1_data(hit_main *cv)
         int kj = 0;
         for(int i = 0; i < block_count; i++)
         {
-            if(!is_drawable_block(&save_file->blocks[i]))
+            #if 1
+            if(is_drawable_block(&save_file->blocks[i]))
                 continue;
-            
+            #endif
             if(!(kj%3))
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3, 3);
             kj++;
@@ -338,71 +429,74 @@ void hit_s1_data(hit_main *cv)
                 {
                     case(FOURCC_LEDR):
                     { 
-                        if(cv->s1_adv)
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                        nk_label(cv->nk_ctx, "Game Label:", NK_TEXT_ALIGN_CENTERED);
+                        nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, blocks[i].ledr.game_label, 64, (nk_plugin_filter)NK_FILTER_INT);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                        nk_label(cv->nk_ctx, thumbnail_label_from_id(blocks[i].ledr.thumbnail_index), NK_TEXT_ALIGN_CENTERED);
+                        nk_property_int(cv->nk_ctx, "ID:", 0, &blocks[i].ledr.thumbnail_index, 13, 1, 1);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_property_int(cv->nk_ctx, "Progress", 0, &blocks[i].ledr.progress, 100, 1, .5);
+                        /*
+                        if(nk_menu_begin_label(cv->nk_ctx, thumbnail_label_from_id(blocks[i].ledr.thumbnail_index), NK_TEXT_ALIGN_CENTERED, nk_vec2(window_width/3-20, win_height/3/2)))
                         {
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
-                            nk_label(cv->nk_ctx, "Game Label:", NK_TEXT_ALIGN_CENTERED);
-                            nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, blocks[i].ledr.game_label, 64, (nk_plugin_filter)NK_FILTER_INT);
-                            /*
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
-                            nk_label(cv->nk_ctx, "Thumbnail ID:", NK_TEXT_ALIGN_CENTERED);
-                            nk_property_int(cv->nk_ctx, thumbnail_label_from_id(blocks[i].ledr.thumbnail_index), 0, &blocks[i].ledr.thumbnail_index, 13, 1, 1);
-                            */
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                            nk_property_int(cv->nk_ctx, "Progress", 0, &blocks[i].ledr.progress, 100, 1, .5);
-                            /*
-                            if(nk_menu_begin_label(cv->nk_ctx, thumbnail_label_from_id(blocks[i].ledr.thumbnail_index), NK_TEXT_ALIGN_CENTERED, nk_vec2(window_width/3-20, win_height/3/2)))
+                            for(int i = 0; i<14; i++)
                             {
-                                for(int i = 0; i<14; i++)
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/20, 1);
+                                if(nk_menu_item_label(cv->nk_ctx, thumbnail_label_from_id(i), NK_TEXT_ALIGN_LEFT))
                                 {
-                                    nk_layout_row_dynamic(cv->nk_ctx, win_height/20, 1);
-                                    if(nk_menu_item_label(cv->nk_ctx, thumbnail_label_from_id(i), NK_TEXT_ALIGN_LEFT))
-                                    {
-                                        blocks[i].ledr.thumbnail_index = i;
-                                    }
+                                    blocks[i].ledr.thumbnail_index = i;
                                 }
-                                nk_menu_end(cv->nk_ctx);
                             }
-                            */
-                            break;  
+                            nk_menu_end(cv->nk_ctx);
                         }
+                        */
+                        break;  
                     }
                     case(FOURCC_ROOM):
                     {
-                        if(cv->s1_adv)
-                        {
-                            //TODO(Will): Make this a selection box
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
-                            nk_label(cv->nk_ctx, "Room:", NK_TEXT_ALIGN_CENTERED);
-                            int len = 5;
-                            nk_edit_string(cv->nk_ctx, NK_EDIT_FIELD, (char*)&blocks[i].room.sceneid, &len, 5, (nk_plugin_filter)NK_FILTER_INT);
-                            break;
-                        }
+                        //TODO(Will): Make this a selection box
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                        nk_label(cv->nk_ctx, "Room:", NK_TEXT_ALIGN_CENTERED);
+                        nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, blocks[i].room.sceneid, 5, (nk_plugin_filter)NK_FILTER_INT);
+                        break;
+                    }
+                    case(FOURCC_PREF):
+                    {
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_property_int(cv->nk_ctx, "Sound Mode", 0, (s32*)&blocks[i].pref.sound_mode, INT_MAX, 1, 1);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_property_float(cv->nk_ctx, "Music Volume", 0.0f, &blocks[i].pref.music_volume, 5000.0f, .5f, .5f);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_property_float(cv->nk_ctx, "SFX Volume", 0.0f, &blocks[i].pref.sfx_volume, 5000.0f, .5f, .5f);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_bool a = !blocks[i].pref.rumble;
+                        nk_checkbox_label(cv->nk_ctx, "Rumble", &a);
+                        blocks[i].pref.rumble = !a;
+                        break;
                     }
                     case(FOURCC_PLYR):
                     {
-                        if(cv->s1_adv)
-                        {
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                            nk_property_int(cv->nk_ctx, "Max Health", 0, &blocks[i].plyr.max_health, 6, 1, 1);
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                            nk_property_int(cv->nk_ctx, "Character", 0, &blocks[i].plyr.character, 2, 1, 5);
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                            nk_property_int(cv->nk_ctx, "Shinies", INT_MIN, &blocks[i].plyr.shinies, INT_MAX, 100, 1);
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                            nk_property_int(cv->nk_ctx, "Spats", 0, &blocks[i].plyr.spats, 100, 1, 1);
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                            nk_bool a, b;
-                            a = !blocks[i].plyr.has_bubble_bowl;
-                            b = !blocks[i].plyr.has_cruise_bubble;
-                            nk_checkbox_label(cv->nk_ctx, "BB Unlocked", &a);
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                            nk_checkbox_label(cv->nk_ctx, "CB Unlocked", &b);
-                            
-                            blocks[i].plyr.has_bubble_bowl = !a;
-                            blocks[i].plyr.has_cruise_bubble = !b;
-                            break;
-                        }
+
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_property_int(cv->nk_ctx, "Max Health", 0, &blocks[i].plyr.max_health, 6, 1, 1);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_property_int(cv->nk_ctx, "Character", 0, &blocks[i].plyr.character, 2, 1, 5);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_property_int(cv->nk_ctx, "Shinies", INT_MIN, &blocks[i].plyr.shinies, INT_MAX, 100, 1);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_property_int(cv->nk_ctx, "Spats", 0, &blocks[i].plyr.spats, 100, 1, 1);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_bool a, b;
+                        a = !blocks[i].plyr.has_bubble_bowl;
+                        b = !blocks[i].plyr.has_cruise_bubble;
+                        nk_checkbox_label(cv->nk_ctx, "BB Unlocked", &a);
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                        nk_checkbox_label(cv->nk_ctx, "CB Unlocked", &b);
+                        
+                        blocks[i].plyr.has_bubble_bowl = !a;
+                        blocks[i].plyr.has_cruise_bubble = !b;
+                        break;
                     }
                     case(FOURCC_CNTR):
                     {
@@ -436,11 +530,58 @@ void hit_s1_data(hit_main *cv)
                         }
                         break;
                     }
-                    case(FOURCC_HB02):
-                    {
-                        hit_s1_scene_switch(cv, i, win_height);
-                        break;
-                    }
+                    CaseSceneDisplay(cv, i, win_height, JF01);
+                    CaseSceneDisplay(cv, i, win_height, JF02);
+                    CaseSceneDisplay(cv, i, win_height, JF03);
+                    CaseSceneDisplay(cv, i, win_height, JF04);
+                    CaseSceneDisplay(cv, i, win_height, KF01);
+                    CaseSceneDisplay(cv, i, win_height, KF02);
+                    CaseSceneDisplay(cv, i, win_height, KF04);
+                    CaseSceneDisplay(cv, i, win_height, KF05);
+                    CaseSceneDisplay(cv, i, win_height, MNU3);
+                    CaseSceneDisplay(cv, i, win_height, RB01);
+                    CaseSceneDisplay(cv, i, win_height, RB02);
+                    CaseSceneDisplay(cv, i, win_height, RB03);
+                    CaseSceneDisplay(cv, i, win_height, SM01);
+                    CaseSceneDisplay(cv, i, win_height, SM02);
+                    CaseSceneDisplay(cv, i, win_height, SM03);
+                    CaseSceneDisplay(cv, i, win_height, SM04);
+                    CaseSceneDisplay(cv, i, win_height, B101);
+                    CaseSceneDisplay(cv, i, win_height, B201);
+                    CaseSceneDisplay(cv, i, win_height, B302);
+                    CaseSceneDisplay(cv, i, win_height, B303);
+                    CaseSceneDisplay(cv, i, win_height, BB01);
+                    CaseSceneDisplay(cv, i, win_height, BB02);
+                    CaseSceneDisplay(cv, i, win_height, BB03);
+                    CaseSceneDisplay(cv, i, win_height, BB04);
+                    CaseSceneDisplay(cv, i, win_height, BC01);
+                    CaseSceneDisplay(cv, i, win_height, BC02);
+                    CaseSceneDisplay(cv, i, win_height, BC03);
+                    CaseSceneDisplay(cv, i, win_height, BC04);
+                    CaseSceneDisplay(cv, i, win_height, BC05);
+                    CaseSceneDisplay(cv, i, win_height, DB01);
+                    CaseSceneDisplay(cv, i, win_height, DB02);
+                    CaseSceneDisplay(cv, i, win_height, DB03);
+                    CaseSceneDisplay(cv, i, win_height, DB04);
+                    CaseSceneDisplay(cv, i, win_height, DB06);
+                    CaseSceneDisplay(cv, i, win_height, GL01);
+                    CaseSceneDisplay(cv, i, win_height, GL02);
+                    CaseSceneDisplay(cv, i, win_height, GL03);
+                    CaseSceneDisplay(cv, i, win_height, GY01);
+                    CaseSceneDisplay(cv, i, win_height, GY02);
+                    CaseSceneDisplay(cv, i, win_height, GY03);
+                    CaseSceneDisplay(cv, i, win_height, GY04);
+                    CaseSceneDisplay(cv, i, win_height, HB00);
+                    CaseSceneDisplay(cv, i, win_height, HB01);
+                    CaseSceneDisplay(cv, i, win_height, HB02);
+                    CaseSceneDisplay(cv, i, win_height, HB03);
+                    CaseSceneDisplay(cv, i, win_height, HB04);
+                    CaseSceneDisplay(cv, i, win_height, HB05);
+                    CaseSceneDisplay(cv, i, win_height, HB06);
+                    CaseSceneDisplay(cv, i, win_height, HB07);
+                    CaseSceneDisplay(cv, i, win_height, HB08);
+                    CaseSceneDisplay(cv, i, win_height, HB09);
+                    CaseSceneDisplay(cv, i, win_height, PG12);
 #ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
                     default:
                     {
@@ -508,6 +649,11 @@ void hit_s1_bottom_panel(hit_main *cv)
                 hit_message_box_ok("Save Failed", "Failed to Save the File :(. Sorry.");
             }
         }
+        if(nk_button_label(cv->nk_ctx, "Load File"))
+        {
+            //TODO(Will): Stop this from breaking after a few clicks
+            hit_load_save(cv);
+        }
         cv->s1_adv = 1;
         nk_label(cv->nk_ctx, cv->s1_fpath, NK_TEXT_ALIGN_CENTERED);
     }
@@ -556,23 +702,10 @@ void hit_update_and_render(hit_main *cv)
     }
 }
 
+
 void hit_common_init(hit_main *cv)
 {
-    char buffer[PATH_BUFFER_SIZE];
-    if(!hit_file_select_read(buffer, PATH_BUFFER_SIZE))
-    {
-        FILE *in = fopen(buffer, "rb");
-        if (in) {
-            int size = 0;
-            unsigned char *data = read_entire_file(buffer, &size);
-            bfbb_save_file save_file;
-            if (!bfbb_save_file_read(&cv->save_file, data, size)) {
-                // TODO(jelly): the file couldn't be parsed properly: TELL THE USER OR SOMETHING !!!
-            }
-            cv->save_file_is_loaded = 1;
-        }
-        memcpy(cv->s1_fpath, buffer, 4096);
-    }
+    hit_load_save(cv);
     
     //TODO(Will): Make this all one function
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE

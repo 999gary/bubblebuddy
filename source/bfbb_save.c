@@ -98,7 +98,7 @@ typedef struct {
 } bfbb_save_file_block_ledr;
 
 typedef struct {
-    u32 sceneid; // NOTE(jelly): this is the FOURCC of the current level
+    char sceneid[5]; // NOTE(jelly): this is the FOURCC of the current level
 } bfbb_save_file_block_room;
 
 typedef struct {
