@@ -1,5 +1,6 @@
 #include "types.h"
 #include "config.h"
+#include "byteswap.h"
 #include "bit_methods.h"
 
 #define ArrayCount(arr) (sizeof(arr)/sizeof((arr)[0]))
@@ -215,13 +216,20 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Type: %x", b->type);
                 nk_bool a, c;
                 nk_bool flag[7];
+                //printf("%x\n", b->pickup.state);
+                u32 state = b->pickup.state;
+                for(int i = 0; i<7; i++)
+                {
+                    flag[i] = state & 1;
+                    state >>= 1;
+                }
                 a = b->pickup.base_enable;
                 c = b->pickup.show_ent;
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                 nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
                 nk_checkbox_label(cv->nk_ctx, "Shown", &c);
-                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 8);
+                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 4);
                 char buffer[128];
                 for(int i = 0; i<7; i++)
                 {
@@ -232,7 +240,7 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
            
                 b->pickup.base_enable = a;
                 b->pickup.show_ent = c;
-                b->pickup.state |= flag[0] | flag[1] << 1 | flag[2] << 2 | flag[3] << 3 | flag[4] << 4 | flag[5] << 5 | flag[6] << 6 | flag[7] << 7;
+                b->pickup.state = flag[0] | flag[1] << 1 | flag[2] << 2 | flag[3] << 3 | flag[4] << 4 | flag[5] << 5 | flag[6] << 6 | flag[7] << 7;
                 break;
             }
             default:

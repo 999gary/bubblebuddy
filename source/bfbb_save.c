@@ -459,7 +459,8 @@ void bfbb_save_file_byteswap(u8 *data, int size, int in) {
                 // NOTE(jelly): 'bit' blocks (plyr, cntr, scenes) SHOULD be byteswapped!
                 //               the commented-out code below prevents them from being byteswapped 
                 /*
-                                if (bfbb_save_file_fourcc_is_bit_block(id)) {
+                                if (!in && bfbb_save_file_fourcc_is_bit_block(id)) {
+                                    
                                     eat_bytes_and_byteswap(&b, 4);
                                     u32 *block_size;
                                     if (in) block_size = (u32 *)eat_bytes_and_byteswap(&b, 4);
@@ -469,7 +470,7 @@ void bfbb_save_file_byteswap(u8 *data, int size, int in) {
                                     if (!in) byteswap32(block_size);
                                 }
                                 else 
-                                    */
+                    */            
                 eat_bytes_and_byteswap(&b, 4);
             }
         }
