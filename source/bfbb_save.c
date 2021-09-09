@@ -844,7 +844,7 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
     if (rc < 1) return 0;
     result->original_file_size = gdat.header.bytes_used;
     result->original_crc32_checksum = gdat.gdat.crc32_checksum;
-
+    
     while (rc = bfbb_save_file_block_read(&b, &result->blocks[i++], is_gci)) {
         if (rc < 0) {
             result->block_count = 0;
@@ -871,6 +871,13 @@ void bfbb_save_file_set_gdat_block(bfbb_save_file_block *block, int file_size, u
     block->header.block_size = 1;
     block->header.bytes_used = file_size;
     block->gdat.crc32_checksum = crc32_checksum;
+    
+    if (is_gci) {
+        byteswap32(&block->header.id);
+        byteswap32(&block->header.block_size);
+        byteswap32(&block->header.bytes_used);
+        byteswap32(&block->gdat.crc32_checksum);
+    }
 }
 
 typedef struct {
@@ -1036,19 +1043,6 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
     int size_to_write =  is_gdat ? 4 : block->header.bytes_used;
     int padding_size = is_gdat ? 0 : block->header.block_size - size_to_write;
     
-    // NOTE(jelly): the hell is this?
-    /*
-    if(block->header.id == FOURCC_CONST('L', 'E', 'D', 'R'))
-    {
-        for(int i = 0; i< block->header.bytes_used; i++)
-        {
-            if(block->raw_bytes[i] == '\0')
-            {
-                block->raw_bytes[i] = (char)0x01;
-            }
-        }
-    }
-    */
     bfbb_save_file_block *result = 0;
     
     result = (bfbb_save_file_block *)(b->bytes + b ->size);
@@ -1228,11 +1222,11 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
     bfbb_save_file_append_sfil(save_file, &b, is_gci);
     
     file_size = b.size - ((unsigned char *)gdat - static_buffer);
-    checksum = crc32_get_checksum((char *)gdat + 16, file_size - 16);
-    
-    bfbb_save_file_set_gdat_block(gdat, file_size, checksum, is_gci);
     
     if (is_gci) bfbb_save_file_byteswap((u8 *)gdat, file_size, 0);
+    
+    checksum = crc32_get_checksum((char *)gdat + 16, file_size - 16);
+    bfbb_save_file_set_gdat_block(gdat, file_size, checksum, is_gci);
     
     if (is_gci) {
         write_byte_n_times(&b, 0, 0x14040 - b.size);
