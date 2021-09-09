@@ -6,6 +6,34 @@
 
 #include "bfbb_gci_header.h"
 #include "hmac_sha1.c"
+
+
+#define BASE_TYPE_TRIGGER      1
+#define BASE_TYPE_PICKUP       4
+#define BASE_TYPE_PLATFORM     6
+#define BASE_TYPE_STATIC      11
+#define BASE_TYPE_TIMER       14
+#define BASE_TYPE_PORTAL      16
+#define BASE_TYPE_GROUP       17
+#define BASE_TYPE_SFX         19
+#define BASE_TYPE_COUNTER     22
+#define BASE_TYPE_BUTTON      24
+#define BASE_TYPE_DISPATCHER  30
+#define BASE_TYPE_COND        31
+#define BASE_TYPE_CUTSCENEMGR 40
+#define BASE_TYPE_TELEPORTBOX 49
+#define BASE_TYPE_TASKBOX     53
+#define BASE_TYPE_TAXI        57
+#define BASE_TYPE_CAMERAFLY   62
+
+
+typedef struct {
+    u32 id;
+    u8 type;
+    char *name;
+} scene_table_entry;
+
+
 #include "scenedata/all.h"
 
 // NOTE(jelly): this code (and table) is based off of the crc32 code from the decomp
@@ -61,23 +89,7 @@ u32 crc32_get_checksum(char *data, int size) {
     return xUtil_crc_update(-1, data, size);
 }
 
-#define BASE_TYPE_TRIGGER      1
-#define BASE_TYPE_PICKUP       4
-#define BASE_TYPE_PLATFORM     6
-#define BASE_TYPE_STATIC      11
-#define BASE_TYPE_TIMER       14
-#define BASE_TYPE_PORTAL      16
-#define BASE_TYPE_GROUP       17
-#define BASE_TYPE_SFX         19
-#define BASE_TYPE_COUNTER     22
-#define BASE_TYPE_BUTTON      24
-#define BASE_TYPE_DISPATCHER  30
-#define BASE_TYPE_COND        31
-#define BASE_TYPE_CUTSCENEMGR 40
-#define BASE_TYPE_TELEPORTBOX 49
-#define BASE_TYPE_TASKBOX     53
-#define BASE_TYPE_TAXI        57
-#define BASE_TYPE_CAMERAFLY   62
+
 
 #define BFBB_SAVE_FILE_LEDR_RANDOM_TEXT "--TakeMeToYourLeader--"
 
@@ -528,13 +540,12 @@ int bfbb_save_file_block_read(buffer *b, bfbb_save_file_block *new_block, int is
     return -1;
 }
 
-base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s32 block_index, bit_reader* br, u32* table)
+base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s32 block_index, bit_reader* br, scene_table_entry* p)
 {
     base_type b = {0};
-    u32 *p = &table[block_index*2];
-    b.id = p[0];
-    b.type = p[1];
-    switch(p[1])
+    b.id = p->id;
+    b.type = p->type;
+    switch(p->type)
     {
         case BASE_TYPE_TRIGGER:
         {
@@ -635,14 +646,14 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
         }
         default:
         {
-            printf("Unknown base type %d\n", p[1]);
+            printf("Unknown base type %d\n", p->type);
             assert(0);
         }
     }
     return b;
 }
 
-int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_save_file_block *block, u32 *table, int table_count) {
+int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_save_file_block *block, scene_table_entry *table, int table_count) {
     // NOTE(jelly): declaring a scene like this before writing to block->scene MUST be done because block->scene is a union
     //              and reading from scene while writing to it will be broken.
     bfbb_save_file_block_scene scene = {0};
@@ -651,7 +662,7 @@ int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_sa
     scene.offsetx = bit_eat_float(br);
     scene.offsety = bit_eat_float(br);
     for (int i = 0; i < table_count; i++) {
-        arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, br, table));
+        arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, br, &table[i]));
     }
     block->scene = scene;
     return 1; // TODO(jelly): more checks??
@@ -660,7 +671,7 @@ int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_sa
 #define CaseSceneTableName(fourcc) fourcc##_table
 #define CaseSceneRead(sf,br,bl,fourcc) \
 case FOURCC_##fourcc: \
-bfbb_save_file_read_scene(sf, br, bl, (u32 *)CaseSceneTableName(fourcc), ArrayCount(CaseSceneTableName(fourcc)));\
+bfbb_save_file_read_scene(sf, br, bl, CaseSceneTableName(fourcc), ArrayCount(CaseSceneTableName(fourcc)));\
 break;
 
 const u8 spat_count_per_world[] = {
@@ -833,7 +844,7 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
     if (rc < 1) return 0;
     result->original_file_size = gdat.header.bytes_used;
     result->original_crc32_checksum = gdat.gdat.crc32_checksum;
-    
+
     while (rc = bfbb_save_file_block_read(&b, &result->blocks[i++], is_gci)) {
         if (rc < 0) {
             result->block_count = 0;
@@ -1157,9 +1168,9 @@ void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int 
     {
         size_of_data+=save_file->blocks[i].header.block_size;
     }
-    size_of_data = b->size;
+    //size_of_data = b->size;
     //TODO(Will): Figure out how to actually fucking do this :)
-    u32 sfil_size = 0xc808 - size_of_data + 1036 + 8;
+    u32 sfil_size = 0xBB88;
     //if (is_gci) sfil_size -= 0x6040; // NOTE(jelly): size of entire gci header
     u32 sfil_bytes_used = 8;
     

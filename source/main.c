@@ -45,6 +45,7 @@ typedef struct {
     int running;
     int screen;
     int s1_adv;
+    int s1_scene_id;
     char s1_fpath[4096];
     bfbb_save_file save_file;
     hh* hiphop;
@@ -103,6 +104,7 @@ void hit_load_save(hit_main *cv)
     }
 }
 
+
 /*-------------------------------------------
 
 Global Components
@@ -121,9 +123,29 @@ void hit_top_panel(hit_main *cv)
             cv->screen = 1;
         }
 #endif
-        if(nk_button_label(cv->nk_ctx, "SAVEEDIT"))
+        if(nk_menu_begin_text(cv->nk_ctx, "Save Edit", 9, NK_TEXT_ALIGN_CENTERED, nk_vec2(window_width/6, (window_height/20)*(cv->save_file.block_count))))
         {
-            cv->screen = 0;
+            nk_layout_row_dynamic(cv->nk_ctx, window_height/20, 1);
+            if(nk_menu_item_label(cv->nk_ctx, "General", NK_TEXT_ALIGN_CENTERED))
+            {
+                cv->s1_scene_id = 0;
+            }
+            for(int i = 0; i<cv->save_file.block_count; i++)
+            {
+                bfbb_save_file_block b = cv->save_file.blocks[i];
+                if(bfbb_save_file_fourcc_is_scene(b.header.id))
+                {
+                    nk_layout_row_dynamic(cv->nk_ctx, window_height/20, 1);
+                    char buffer[8];
+                    char* chars = b.header.id_chars;
+                    sprintf(buffer, "%c%c%c%c\0", chars[3], chars[2], chars[1], chars[0]);
+                    if(nk_menu_item_label(cv->nk_ctx, buffer, NK_TEXT_ALIGN_CENTERED))
+                    {
+                        cv->s1_scene_id = b.header.id;
+                    }
+                }
+            }
+            nk_menu_end(cv->nk_ctx);
         }
     }
     nk_end(cv->nk_ctx);
@@ -211,24 +233,21 @@ char* thumbnail_label_from_id(int32_t id)
     return lookup[id];
 }
 
-u32 non_drawable_block_ids[] = {
-    FOURCC_SVID
+u32 drawable_block_ids[] = {
+    FOURCC_LEDR, FOURCC_PLYR, FOURCC_PREF, FOURCC_CNTR, FOURCC_ROOM
 };
 
 int is_drawable_block(bfbb_save_file_block *block) {
     u32 id = block->header.id;
-    for (int i = 0; i < ArrayCount(non_drawable_block_ids); i++) {
-        if (id == non_drawable_block_ids[i]) return 1;
+    for (int i = 0; i < ArrayCount(drawable_block_ids); i++) {
+        if (id == drawable_block_ids[i]) return 1;
     }
     return 0;
 }
 
-void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
+void hit_s1_scene_switch(hit_main *cv, bfbb_save_file_block* block, int j, float win_height)
 {
-    bfbb_save_file_block *blocks = cv->save_file.blocks;
-    for(int j = 0; j<arrlen(blocks[i].scene.base); j++)
-    {
-        base_type* b = &blocks[i].scene.base[j];
+        base_type* b = &block->scene.base[j];
         switch(b->type)
         {
             case(BASE_TYPE_TRIGGER):
@@ -258,11 +277,11 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 u8 state = b->pickup.state;
                 for(int i = 0; i<7; i++)
                 {
-                    flag[i] = state & 1;
+                    flag[i] = !state & 1;
                     state >>= 1;
                 }
-                a = b->pickup.base_enable;
-                c = b->pickup.show_ent;
+                a = !b->pickup.base_enable;
+                c = !b->pickup.show_ent;
                 nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
                 nk_checkbox_label(cv->nk_ctx, "Enabled", &a);
                 nk_checkbox_label(cv->nk_ctx, "Shown", &c);
@@ -275,8 +294,8 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                     memset(buffer, 0, 128);
                 }
                 
-                b->pickup.base_enable = a;
-                b->pickup.show_ent = c;
+                b->pickup.base_enable = !a;
+                b->pickup.show_ent = !c;
                 b->pickup.state = flag[0] | flag[1] << 1 | flag[2] << 2 | flag[3] << 3 | flag[4] << 4 | flag[5] << 5 | flag[6] << 6 | flag[7] << 7;
                 break;
             }
@@ -356,10 +375,62 @@ void hit_s1_scene_switch(hit_main *cv, int i, float win_height)
                 assert(0);
 #endif
             }
-        }
     }
 }
-
+/*
+                            CaseSceneDisplay(cv, i, win_height, JF01);
+                            CaseSceneDisplay(cv, i, win_height, JF02);
+                            CaseSceneDisplay(cv, i, win_height, JF03);
+                            CaseSceneDisplay(cv, i, win_height, JF04);
+                            CaseSceneDisplay(cv, i, win_height, KF01);
+                            CaseSceneDisplay(cv, i, win_height, KF02);
+                            CaseSceneDisplay(cv, i, win_height, KF04);
+                            CaseSceneDisplay(cv, i, win_height, KF05);
+                            CaseSceneDisplay(cv, i, win_height, MNU3);
+                            CaseSceneDisplay(cv, i, win_height, RB01);
+                            CaseSceneDisplay(cv, i, win_height, RB02);
+                            CaseSceneDisplay(cv, i, win_height, RB03);
+                            CaseSceneDisplay(cv, i, win_height, SM01);
+                            CaseSceneDisplay(cv, i, win_height, SM02);
+                            CaseSceneDisplay(cv, i, win_height, SM03);
+                            CaseSceneDisplay(cv, i, win_height, SM04);
+                            CaseSceneDisplay(cv, i, win_height, B101);
+                            CaseSceneDisplay(cv, i, win_height, B201);
+                            CaseSceneDisplay(cv, i, win_height, B302);
+                            CaseSceneDisplay(cv, i, win_height, B303);
+                            CaseSceneDisplay(cv, i, win_height, BB01);
+                            CaseSceneDisplay(cv, i, win_height, BB02);
+                            CaseSceneDisplay(cv, i, win_height, BB03);
+                            CaseSceneDisplay(cv, i, win_height, BB04);
+                            CaseSceneDisplay(cv, i, win_height, BC01);
+                            CaseSceneDisplay(cv, i, win_height, BC02);
+                            CaseSceneDisplay(cv, i, win_height, BC03);
+                            CaseSceneDisplay(cv, i, win_height, BC04);
+                            CaseSceneDisplay(cv, i, win_height, BC05);
+                            CaseSceneDisplay(cv, i, win_height, DB01);
+                            CaseSceneDisplay(cv, i, win_height, DB02);
+                            CaseSceneDisplay(cv, i, win_height, DB03);
+                            CaseSceneDisplay(cv, i, win_height, DB04);
+                            CaseSceneDisplay(cv, i, win_height, DB06);
+                            CaseSceneDisplay(cv, i, win_height, GL01);
+                            CaseSceneDisplay(cv, i, win_height, GL02);
+                            CaseSceneDisplay(cv, i, win_height, GL03);
+                            CaseSceneDisplay(cv, i, win_height, GY01);
+                            CaseSceneDisplay(cv, i, win_height, GY02);
+                            CaseSceneDisplay(cv, i, win_height, GY03);
+                            CaseSceneDisplay(cv, i, win_height, GY04);
+                            CaseSceneDisplay(cv, i, win_height, HB00);
+                            CaseSceneDisplay(cv, i, win_height, HB01);
+                            CaseSceneDisplay(cv, i, win_height, HB02);
+                            CaseSceneDisplay(cv, i, win_height, HB03);
+                            CaseSceneDisplay(cv, i, win_height, HB04);
+                            CaseSceneDisplay(cv, i, win_height, HB05);
+                            CaseSceneDisplay(cv, i, win_height, HB06);
+                            CaseSceneDisplay(cv, i, win_height, HB07);
+                            CaseSceneDisplay(cv, i, win_height, HB08);
+                            CaseSceneDisplay(cv, i, win_height, HB09);
+                            CaseSceneDisplay(cv, i, win_height, PG12);
+*/
 #define CaseSceneDisplay(cv, i, win_height, fourcc) case FOURCC_##fourcc: hit_s1_scene_switch(cv, i, win_height); break;
 
 void hit_s1_data(hit_main *cv)
@@ -409,206 +480,177 @@ void hit_s1_data(hit_main *cv)
     
     if(nk_begin(cv->nk_ctx, "Data Panel", nk_rect(0, win_height_offset, window_width, win_height), NK_WINDOW_BORDER))
     {
-        int kj = 0;
-        for(int i = 0; i < block_count; i++)
+        switch(cv->s1_scene_id)
         {
-#if 1
-            if(is_drawable_block(&save_file->blocks[i]))
-                continue;
-#endif
-            if(!(kj%3))
-                nk_layout_row_dynamic(cv->nk_ctx, win_height/3, 3);
-            kj++;
-            char title[16] = {0};
-            for (int j = 0; j < 4; j++) {
-                title[j] = blocks[i].header.id_chars[3-j];
-            }
-            
-            if(nk_group_begin_titled(cv->nk_ctx, title, title, NK_WINDOW_BORDER | NK_WINDOW_TITLE))
+            case(FOURCC_HB02):
             {
-                switch(blocks[i].header.id)
+                int kj = 0;
+                bfbb_save_file_block *b = bfbb_save_file_find_block(&cv->save_file, "HB02");
+                for(int i = 0; i<arrlen(b->scene.base); i++)
                 {
-                    case(FOURCC_LEDR):
-                    { 
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
-                        nk_label(cv->nk_ctx, "Game Label:", NK_TEXT_ALIGN_CENTERED);
-                        nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, blocks[i].ledr.game_label, 64, (nk_plugin_filter)NK_FILTER_INT);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
-                        nk_label(cv->nk_ctx, thumbnail_label_from_id(blocks[i].ledr.thumbnail_index), NK_TEXT_ALIGN_CENTERED);
-                        nk_property_int(cv->nk_ctx, "ID:", 0, &blocks[i].ledr.thumbnail_index, 13, 1, 1);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_property_int(cv->nk_ctx, "Progress", 0, &blocks[i].ledr.progress, 100, 1, .5);
-                        /*
-                        if(nk_menu_begin_label(cv->nk_ctx, thumbnail_label_from_id(blocks[i].ledr.thumbnail_index), NK_TEXT_ALIGN_CENTERED, nk_vec2(window_width/3-20, win_height/3/2)))
-                        {
-                            for(int i = 0; i<14; i++)
-                            {
-                                nk_layout_row_dynamic(cv->nk_ctx, win_height/20, 1);
-                                if(nk_menu_item_label(cv->nk_ctx, thumbnail_label_from_id(i), NK_TEXT_ALIGN_LEFT))
-                                {
-                                    blocks[i].ledr.thumbnail_index = i;
-                                }
-                            }
-                            nk_menu_end(cv->nk_ctx);
-                        }
-                        */
-                        break;  
-                    }
-                    case(FOURCC_ROOM):
+                    base_type *bt = &b->scene.base[i];
+                    if(!(kj%3))
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3, 3);
+                    kj++;
+                    if(nk_group_begin_titled(cv->nk_ctx, HB02_table[i].name, HB02_table[i].name, NK_WINDOW_BORDER | NK_WINDOW_TITLE))
                     {
-                        //TODO(Will): Make this a selection box
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
-                        nk_label(cv->nk_ctx, "Room:", NK_TEXT_ALIGN_CENTERED);
-                        nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, blocks[i].room.sceneid, 5, (nk_plugin_filter)NK_FILTER_INT);
-                        break;
+                        hit_s1_scene_switch(cv, b, i, win_height);
+                        nk_group_end(cv->nk_ctx);
                     }
-                    case(FOURCC_PREF):
-                    {
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_property_int(cv->nk_ctx, "Sound Mode", 0, (s32*)&blocks[i].pref.sound_mode, INT_MAX, 1, 1);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_property_float(cv->nk_ctx, "Music Volume", 0.0f, &blocks[i].pref.music_volume, 5000.0f, .5f, .5f);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_property_float(cv->nk_ctx, "SFX Volume", 0.0f, &blocks[i].pref.sfx_volume, 5000.0f, .5f, .5f);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_bool a = !blocks[i].pref.rumble;
-                        nk_checkbox_label(cv->nk_ctx, "Rumble", &a);
-                        blocks[i].pref.rumble = !a;
-                        break;
-                    }
-                    case(FOURCC_PLYR):
-                    {
-                        
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_property_int(cv->nk_ctx, "Max Health", 0, &blocks[i].plyr.max_health, 6, 1, 1);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_property_int(cv->nk_ctx, "Character", 0, &blocks[i].plyr.character, 2, 1, 5);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_property_int(cv->nk_ctx, "Shinies", INT_MIN, &blocks[i].plyr.shinies, INT_MAX, 100, 1);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_property_int(cv->nk_ctx, "Spats", 0, &blocks[i].plyr.spats, 100, 1, 1);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_bool a, b;
-                        a = !blocks[i].plyr.has_bubble_bowl;
-                        b = !blocks[i].plyr.has_cruise_bubble;
-                        nk_checkbox_label(cv->nk_ctx, "BB Unlocked", &a);
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_checkbox_label(cv->nk_ctx, "CB Unlocked", &b);
-                        
-                        blocks[i].plyr.has_bubble_bowl = !a;
-                        blocks[i].plyr.has_cruise_bubble = !b;
-                        break;
-                    }
-                    case(FOURCC_CNTR):
-                    {
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "0 = Spat not found");
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "1 = Spat found");
-                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
-                        nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "2 = Spat Collected");
-                        for(int k = 0; k<15; k++)
-                        {
-                            nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 8);
-                            for(int j = 0; j<spat_count_per_world[k]; j++)
-                            {
-                                s16* spat = &blocks[i].cntr.spats[k][j];
-                                char yeah[2];
-                                yeah[0] = nibble_to_hex_char(*spat & 0xf);
-                                yeah[1] = '\0';
-                                if(nk_button_label(cv->nk_ctx, yeah))
-                                {
-                                    if(*spat == 2)
-                                    {
-                                        *spat = 0;
-                                    }
-                                    else
-                                    {
-                                        *spat += 1;
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    }
-                    CaseSceneDisplay(cv, i, win_height, JF01);
-                    CaseSceneDisplay(cv, i, win_height, JF02);
-                    CaseSceneDisplay(cv, i, win_height, JF03);
-                    CaseSceneDisplay(cv, i, win_height, JF04);
-                    CaseSceneDisplay(cv, i, win_height, KF01);
-                    CaseSceneDisplay(cv, i, win_height, KF02);
-                    CaseSceneDisplay(cv, i, win_height, KF04);
-                    CaseSceneDisplay(cv, i, win_height, KF05);
-                    CaseSceneDisplay(cv, i, win_height, MNU3);
-                    CaseSceneDisplay(cv, i, win_height, RB01);
-                    CaseSceneDisplay(cv, i, win_height, RB02);
-                    CaseSceneDisplay(cv, i, win_height, RB03);
-                    CaseSceneDisplay(cv, i, win_height, SM01);
-                    CaseSceneDisplay(cv, i, win_height, SM02);
-                    CaseSceneDisplay(cv, i, win_height, SM03);
-                    CaseSceneDisplay(cv, i, win_height, SM04);
-                    CaseSceneDisplay(cv, i, win_height, B101);
-                    CaseSceneDisplay(cv, i, win_height, B201);
-                    CaseSceneDisplay(cv, i, win_height, B302);
-                    CaseSceneDisplay(cv, i, win_height, B303);
-                    CaseSceneDisplay(cv, i, win_height, BB01);
-                    CaseSceneDisplay(cv, i, win_height, BB02);
-                    CaseSceneDisplay(cv, i, win_height, BB03);
-                    CaseSceneDisplay(cv, i, win_height, BB04);
-                    CaseSceneDisplay(cv, i, win_height, BC01);
-                    CaseSceneDisplay(cv, i, win_height, BC02);
-                    CaseSceneDisplay(cv, i, win_height, BC03);
-                    CaseSceneDisplay(cv, i, win_height, BC04);
-                    CaseSceneDisplay(cv, i, win_height, BC05);
-                    CaseSceneDisplay(cv, i, win_height, DB01);
-                    CaseSceneDisplay(cv, i, win_height, DB02);
-                    CaseSceneDisplay(cv, i, win_height, DB03);
-                    CaseSceneDisplay(cv, i, win_height, DB04);
-                    CaseSceneDisplay(cv, i, win_height, DB06);
-                    CaseSceneDisplay(cv, i, win_height, GL01);
-                    CaseSceneDisplay(cv, i, win_height, GL02);
-                    CaseSceneDisplay(cv, i, win_height, GL03);
-                    CaseSceneDisplay(cv, i, win_height, GY01);
-                    CaseSceneDisplay(cv, i, win_height, GY02);
-                    CaseSceneDisplay(cv, i, win_height, GY03);
-                    CaseSceneDisplay(cv, i, win_height, GY04);
-                    CaseSceneDisplay(cv, i, win_height, HB00);
-                    CaseSceneDisplay(cv, i, win_height, HB01);
-                    CaseSceneDisplay(cv, i, win_height, HB02);
-                    CaseSceneDisplay(cv, i, win_height, HB03);
-                    CaseSceneDisplay(cv, i, win_height, HB04);
-                    CaseSceneDisplay(cv, i, win_height, HB05);
-                    CaseSceneDisplay(cv, i, win_height, HB06);
-                    CaseSceneDisplay(cv, i, win_height, HB07);
-                    CaseSceneDisplay(cv, i, win_height, HB08);
-                    CaseSceneDisplay(cv, i, win_height, HB09);
-                    CaseSceneDisplay(cv, i, win_height, PG12);
-#ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
-                    default:
-                    {
-                        for(int b = 0; b < blocks[i].header.bytes_used; b++)
-                        {
-                            int len = 2;
-                            if(!(b%8))
-                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 8);
-                            
-                            // TODO(jelly): nk_plugin_filter restricts what the user can type - we only want hex, 
-                            //              but that doesn't seem to be offered by nuklear? only float and int?
-                            nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, &bytes_in_hex[i][b*3], 3, (nk_plugin_filter)0);
-                            
-                            //cv->save_file->blocks[i].raw_bytes[b] = hex_string_to_byte(&bytes_in_hex + counter); // ?????
-                        }
-                        break;
-                    }
-#endif
-                    
                 }
-                nk_group_end(cv->nk_ctx);
+                break;
             }
+            default: {
+                int kj = 0;
+                for(int i = 0; i < block_count; i++)
+                {
+        #if 1
+                    if(!is_drawable_block(&save_file->blocks[i]))
+                        continue;
+        #endif
+                    if(!(kj%3))
+                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3, 3);
+                    kj++;
+                    char title[16] = {0};
+                    for (int j = 0; j < 4; j++) {
+                        title[j] = blocks[i].header.id_chars[3-j];
+                    }
+                    
+                    if(nk_group_begin_titled(cv->nk_ctx, title, title, NK_WINDOW_BORDER | NK_WINDOW_TITLE))
+                    {
+                        switch(blocks[i].header.id)
+                        {
+                            case(FOURCC_LEDR):
+                            { 
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                                nk_label(cv->nk_ctx, "Game Label:", NK_TEXT_ALIGN_CENTERED);
+                                nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, blocks[i].ledr.game_label, 64, (nk_plugin_filter)NK_FILTER_INT);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                                nk_label(cv->nk_ctx, thumbnail_label_from_id(blocks[i].ledr.thumbnail_index), NK_TEXT_ALIGN_CENTERED);
+                                nk_property_int(cv->nk_ctx, "ID:", 0, &blocks[i].ledr.thumbnail_index, 13, 1, 1);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_property_int(cv->nk_ctx, "Progress", 0, &blocks[i].ledr.progress, 100, 1, .5);
+                                /*
+                                if(nk_menu_begin_label(cv->nk_ctx, thumbnail_label_from_id(blocks[i].ledr.thumbnail_index), NK_TEXT_ALIGN_CENTERED, nk_vec2(window_width/3-20, win_height/3/2)))
+                                {
+                                    for(int i = 0; i<14; i++)
+                                    {
+                                        nk_layout_row_dynamic(cv->nk_ctx, win_height/20, 1);
+                                        if(nk_menu_item_label(cv->nk_ctx, thumbnail_label_from_id(i), NK_TEXT_ALIGN_LEFT))
+                                        {
+                                            blocks[i].ledr.thumbnail_index = i;
+                                        }
+                                    }
+                                    nk_menu_end(cv->nk_ctx);
+                                }
+                                */
+                                break;  
+                            }
+                            case(FOURCC_ROOM):
+                            {
+                                //TODO(Will): Make this a selection box
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 2);
+                                nk_label(cv->nk_ctx, "Room:", NK_TEXT_ALIGN_CENTERED);
+                                nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, blocks[i].room.sceneid, 5, (nk_plugin_filter)NK_FILTER_INT);
+                                break;
+                            }
+                            case(FOURCC_PREF):
+                            {
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_property_int(cv->nk_ctx, "Sound Mode", 0, (s32*)&blocks[i].pref.sound_mode, INT_MAX, 1, 1);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_property_float(cv->nk_ctx, "Music Volume", 0.0f, &blocks[i].pref.music_volume, 5000.0f, .5f, .5f);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_property_float(cv->nk_ctx, "SFX Volume", 0.0f, &blocks[i].pref.sfx_volume, 5000.0f, .5f, .5f);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_bool a = !blocks[i].pref.rumble;
+                                nk_checkbox_label(cv->nk_ctx, "Rumble", &a);
+                                blocks[i].pref.rumble = !a;
+                                break;
+                            }
+                            case(FOURCC_PLYR):
+                            {
+                                
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_property_int(cv->nk_ctx, "Max Health", 0, &blocks[i].plyr.max_health, 6, 1, 1);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_property_int(cv->nk_ctx, "Character", 0, &blocks[i].plyr.character, 2, 1, 5);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_property_int(cv->nk_ctx, "Shinies", INT_MIN, &blocks[i].plyr.shinies, INT_MAX, 100, 1);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_property_int(cv->nk_ctx, "Spats", 0, &blocks[i].plyr.spats, 100, 1, 1);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_bool a, b;
+                                a = !blocks[i].plyr.has_bubble_bowl;
+                                b = !blocks[i].plyr.has_cruise_bubble;
+                                nk_checkbox_label(cv->nk_ctx, "BB Unlocked", &a);
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_checkbox_label(cv->nk_ctx, "CB Unlocked", &b);
+                                
+                                blocks[i].plyr.has_bubble_bowl = !a;
+                                blocks[i].plyr.has_cruise_bubble = !b;
+                                break;
+                            }
+                            case(FOURCC_CNTR):
+                            {
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "0 = Spat not found");
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "1 = Spat found");
+                                nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 1);
+                                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "2 = Spat Collected");
+                                for(int k = 0; k<15; k++)
+                                {
+                                    nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 8);
+                                    for(int j = 0; j<spat_count_per_world[k]; j++)
+                                    {
+                                        s16* spat = &blocks[i].cntr.spats[k][j];
+                                        char yeah[2];
+                                        yeah[0] = nibble_to_hex_char(*spat & 0xf);
+                                        yeah[1] = '\0';
+                                        if(nk_button_label(cv->nk_ctx, yeah))
+                                        {
+                                            if(*spat == 2)
+                                            {
+                                                *spat = 0;
+                                            }
+                                            else
+                                            {
+                                                *spat += 1;
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+        #ifndef HEX_EDITORS_SUCK_DONT_USE_THEM
+                            default:
+                            {
+                                for(int b = 0; b < blocks[i].header.bytes_used; b++)
+                                {
+                                    int len = 2;
+                                    if(!(b%8))
+                                        nk_layout_row_dynamic(cv->nk_ctx, win_height/3/8, 8);
+                                    
+                                    // TODO(jelly): nk_plugin_filter restricts what the user can type - we only want hex, 
+                                    //              but that doesn't seem to be offered by nuklear? only float and int?
+                                    nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, &bytes_in_hex[i][b*3], 3, (nk_plugin_filter)0);
+                                    
+                                    //cv->save_file->blocks[i].raw_bytes[b] = hex_string_to_byte(&bytes_in_hex + counter); // ?????
+                                }
+                                break;
+                            }
+        #endif
+                            
+                        }
+                        nk_group_end(cv->nk_ctx);
+                    }
             
-        }
+                }
+            }
     }
     nk_end(cv->nk_ctx);
+}
 }
 
 void hit_s1_bottom_panel(hit_main *cv)
