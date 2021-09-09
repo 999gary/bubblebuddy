@@ -277,7 +277,7 @@ void hit_s1_scene_switch(hit_main *cv, bfbb_save_file_block* block, int j, float
                 u8 state = b->pickup.state;
                 for(int i = 0; i<7; i++)
                 {
-                    flag[i] = !state & 1;
+                    flag[i] = state & 1;
                     state >>= 1;
                 }
                 a = !b->pickup.base_enable;
@@ -370,7 +370,7 @@ void hit_s1_scene_switch(hit_main *cv, bfbb_save_file_block* block, int j, float
             }
             default:
             {
-#if 0
+#if 1
                 printf("Unknown base type %d\n", b->type);
                 assert(0);
 #endif

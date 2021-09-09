@@ -909,11 +909,10 @@ void bfbb_save_file_append_padding(write_buffer *b, int padding_size) {
     write_byte_n_times(b, 0xbf, padding_size);
 }
 
-void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_save_file_block *block)
+void bfbb_save_file_write_scene_block(bit_writer *b, scene_table_entry* p, s32 n, bfbb_save_file_block *block)
 {
-    u32 *p = &array[n*2];
     base_type bt = block->scene.base[n];
-    switch(p[1])
+    switch(p->type)
     {
         case BASE_TYPE_TRIGGER:
         {
@@ -1013,7 +1012,7 @@ void bfbb_save_file_write_scene_block(bit_writer *b, u32* array, s32 n, bfbb_sav
         }
         default:
         {
-            printf("Unknown base type %d", p[1]);
+            printf("Unknown base type %d", p->type);
             assert(0);
         }
     }
@@ -1026,17 +1025,17 @@ void bfbb_save_file_write_scene_block_stuff(bit_writer *bw, bfbb_save_file_block
     bit_push_float(bw, block->scene.offsety);
 }
 
-void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, u32 *table, write_buffer *b, int is_big_endian) {
+void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, scene_table_entry *table, write_buffer *b, int is_big_endian) {
     bfbb_save_file_write_scene_block_stuff(bw, block); // TODO(jelly): name this better for godsake
     for (int i =0; i < arrlen(block->scene.base); i++) {
-        bfbb_save_file_write_scene_block(bw, table, i, block);
+        bfbb_save_file_write_scene_block(bw, &table[i], i, block);
     }
     unsigned char *data = b->bytes + b->size;
     int n = block->header.bytes_used;
     b->size += n;
 }
 
-#define CaseSceneWrite(bw, block, b, is_gci, fourcc) case FOURCC_##fourcc: bfbb_save_file_write_scene(bw, block, (u32*)fourcc##_table, b, is_gci); break;
+#define CaseSceneWrite(bw, block, b, is_gci, fourcc) case FOURCC_##fourcc: bfbb_save_file_write_scene(bw, block, fourcc##_table, b, is_gci); break;
 
 bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_file_block *block, int is_gci) {
     int is_gdat = block->header.id == FOURCC_GDAT;
