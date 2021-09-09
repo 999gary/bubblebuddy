@@ -110,7 +110,7 @@ typedef struct {
 } bfbb_save_file_block_ledr;
 
 typedef struct {
-    char sceneid[5]; // NOTE(jelly): this is the FOURCC of the current level
+    char sceneid[4]; // NOTE(jelly): this is the FOURCC of the current level
 } bfbb_save_file_block_room;
 
 typedef struct {
@@ -368,29 +368,39 @@ typedef struct {
 #define FOURCC_SVID FOURCC_CONST('S', 'V', 'I', 'D')
 #define FOURCC_SFIL FOURCC_CONST('S', 'F', 'I', 'L')
 
+#include "scene_tabs.h"
+
+int is_digit(u8 c) {
+    return c >= '0' && c <= '9';
+}
+
+int is_uppercase_letter(u8 c) {
+    return c >= 'A' && c <= 'Z';
+}
+
+int bfbb_save_file_fourcc_looks_like_scene(u32 id) {
+    u32 a = (id >> 24) & 0xff; 
+    u32 b = (id >> 16) & 0xff; 
+    u32 c = (id >> 8) & 0xff; 
+    u32 d = id & 0xff; 
+    return (is_uppercase_letter(a) &&
+            (is_uppercase_letter(b) || is_digit(b)) &&
+            (is_uppercase_letter(c) || is_digit(c)) &&
+            is_digit(d));
+}
+
+const scene_table_meta *get_scene_table_meta(u32 id) {
+    for (int i = 0; i < ArrayCount(scene_tabs); i++) {
+        const scene_table_meta *m = &scene_tabs[i];
+        if (m->id == id) return m;
+    }
+    return 0;
+}
+
 int bfbb_save_file_fourcc_is_scene(u32 id) {
-    static const u32 scene_fourccs[] = {
-        FOURCC_JF01, FOURCC_JF02, FOURCC_JF03, FOURCC_JF04,
-        FOURCC_KF01, FOURCC_KF02, FOURCC_KF04, FOURCC_KF05,
-        FOURCC_MNU3,
-        FOURCC_RB01, FOURCC_RB02, FOURCC_RB03,
-        FOURCC_SM01, FOURCC_SM02, FOURCC_SM03, FOURCC_SM04,
-        FOURCC_B101, FOURCC_B201, FOURCC_B302, FOURCC_B303,
-        FOURCC_BB01, FOURCC_BB02, FOURCC_BB03, FOURCC_BB04,
-        FOURCC_BC01, FOURCC_BC02, FOURCC_BC03, FOURCC_BC04, FOURCC_BC05,
-        FOURCC_DB01, FOURCC_DB02, FOURCC_DB03,
-        FOURCC_DB04, FOURCC_DB06,
-        FOURCC_GL01, FOURCC_GL02, FOURCC_GL03,
-        FOURCC_GY01, FOURCC_GY02, FOURCC_GY03, FOURCC_GY04,
-        FOURCC_HB00, FOURCC_HB01, FOURCC_HB02, 
-        FOURCC_HB03, FOURCC_HB04, FOURCC_HB05,
-        FOURCC_HB06, FOURCC_HB07, FOURCC_HB08,
-        FOURCC_HB09,
-        FOURCC_PG12,
-    };
     // TODO(jelly): is there REALLY no DB05??
-    for (int i = 0; i < ArrayCount(scene_fourccs); i++) {
-        if (id == scene_fourccs[i]) return 1;
+    for (int i = 0; i < ArrayCount(scene_tabs); i++) {
+        if (id == scene_tabs[i].id) return 1;
     }
     return 0;
 }
@@ -668,12 +678,6 @@ int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_sa
     return 1; // TODO(jelly): more checks??
 }
 
-#define CaseSceneTableName(fourcc) fourcc##_table
-#define CaseSceneRead(sf,br,bl,fourcc) \
-case FOURCC_##fourcc: \
-bfbb_save_file_read_scene(sf, br, bl, CaseSceneTableName(fourcc), ArrayCount(CaseSceneTableName(fourcc)));\
-break;
-
 const u8 spat_count_per_world[] = {
     8,8,8,8,1,8,8,8,1,8,8,8,2,8,8
 };
@@ -716,59 +720,6 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 block->plyr = p;
                 break;
             }
-            CaseSceneRead(save_file, &br, block, JF01);
-            CaseSceneRead(save_file, &br, block, JF02);
-            CaseSceneRead(save_file, &br, block, JF03);
-            CaseSceneRead(save_file, &br, block, JF04);
-            CaseSceneRead(save_file, &br, block, KF01);
-            CaseSceneRead(save_file, &br, block, KF02);
-            CaseSceneRead(save_file, &br, block, KF04);
-            CaseSceneRead(save_file, &br, block, KF05);
-            CaseSceneRead(save_file, &br, block, MNU3);
-            CaseSceneRead(save_file, &br, block, RB01);
-            CaseSceneRead(save_file, &br, block, RB02);
-            CaseSceneRead(save_file, &br, block, RB03);
-            CaseSceneRead(save_file, &br, block, SM01);
-            CaseSceneRead(save_file, &br, block, SM02);
-            CaseSceneRead(save_file, &br, block, SM03);
-            CaseSceneRead(save_file, &br, block, SM04);
-            CaseSceneRead(save_file, &br, block, B101);
-            CaseSceneRead(save_file, &br, block, B201);
-            CaseSceneRead(save_file, &br, block, B302);
-            CaseSceneRead(save_file, &br, block, B303);
-            CaseSceneRead(save_file, &br, block, BB01);
-            CaseSceneRead(save_file, &br, block, BB02);
-            CaseSceneRead(save_file, &br, block, BB03);
-            CaseSceneRead(save_file, &br, block, BB04);
-            CaseSceneRead(save_file, &br, block, BC01);
-            CaseSceneRead(save_file, &br, block, BC02);
-            CaseSceneRead(save_file, &br, block, BC03);
-            CaseSceneRead(save_file, &br, block, BC04);
-            CaseSceneRead(save_file, &br, block, BC05);
-            CaseSceneRead(save_file, &br, block, DB01);
-            CaseSceneRead(save_file, &br, block, DB02);
-            CaseSceneRead(save_file, &br, block, DB03);
-            CaseSceneRead(save_file, &br, block, DB04);
-            CaseSceneRead(save_file, &br, block, DB06);
-            CaseSceneRead(save_file, &br, block, GL01);
-            CaseSceneRead(save_file, &br, block, GL02);
-            CaseSceneRead(save_file, &br, block, GL03);
-            CaseSceneRead(save_file, &br, block, GY01);
-            CaseSceneRead(save_file, &br, block, GY02);
-            CaseSceneRead(save_file, &br, block, GY03);
-            CaseSceneRead(save_file, &br, block, GY04);
-            CaseSceneRead(save_file, &br, block, HB00);
-            CaseSceneRead(save_file, &br, block, HB01);
-            CaseSceneRead(save_file, &br, block, HB02);
-            CaseSceneRead(save_file, &br, block, HB03);
-            CaseSceneRead(save_file, &br, block, HB04);
-            CaseSceneRead(save_file, &br, block, HB05);
-            CaseSceneRead(save_file, &br, block, HB06);
-            CaseSceneRead(save_file, &br, block, HB07);
-            CaseSceneRead(save_file, &br, block, HB08);
-            CaseSceneRead(save_file, &br, block, HB09);
-            CaseSceneRead(save_file, &br, block, HB10);
-            CaseSceneRead(save_file, &br, block, PG12);
             case(FOURCC_CNTR):
             {
                 bfbb_save_file_block_cntr c = {0};
@@ -790,26 +741,20 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 break;
             }
             case(FOURCC_LEDR):
-            {
-                break;
-            }
             case(FOURCC_ROOM):
-            {
-                break;
-            }
             case(FOURCC_PREF):
-            {
-                break;
-            }
-            case(FOURCC_SVID):
-            {
-                break;
-            }
+            case(FOURCC_SVID): break;
             default:
             {
-                char* chars = block->header.id_chars;
-                printf("Unknown block: %c%c%c%c", chars[3], chars[2], chars[1], chars[0]);
-                assert(0);
+                const scene_table_meta *m;
+                if (bfbb_save_file_fourcc_looks_like_scene(block->header.id) &&
+                    (m = get_scene_table_meta(block->header.id))) {
+                    bfbb_save_file_read_scene(save_file, &br, block, m->table, m->count);
+                } else {
+                    char* chars = block->header.id_chars;
+                    printf("Unknown block: %c%c%c%c", chars[3], chars[2], chars[1], chars[0]);
+                    assert(0);
+                }
             }
         }
     }
@@ -833,12 +778,12 @@ int bfbb_save_file_read_(bfbb_save_file *result, unsigned char *bytes, int size,
         magic_string = (char *)eat_bytes(&b, sizeof(BFBB_SAVE_FILE_MAGIC_STRING) - 1);
         eat_bytes(&b, 0x599); // NOTE(jelly): zeros - wiki says 599 (decimal); i assume this is a typo
         
+        // NOTE(jelly): we shouldn't care if the string isn't correct.
         /*
-        if (strcmp(magic_string, BFBB_SAVE_FILE_MAGIC_STRING)) {
-            // assert(0);
-            // TODO(jelly): ??? do we honestly care if it's not right?
-        }
-*/
+                if (strcmp(magic_string, BFBB_SAVE_FILE_MAGIC_STRING)) {
+                    // assert(0);
+                }
+        */
         
         bfbb_save_file_byteswap(b.bytes, b.size, 1);
     }
@@ -1028,17 +973,19 @@ void bfbb_save_file_write_scene_block_stuff(bit_writer *bw, bfbb_save_file_block
     bit_push_float(bw, block->scene.offsety);
 }
 
-void bfbb_save_file_write_scene(bit_writer *bw, bfbb_save_file_block *block, scene_table_entry *table, write_buffer *b, int is_big_endian) {
+void bfbb_save_file_write_scene(write_buffer *b, bit_writer *bw, bfbb_save_file_block *block, scene_table_entry *table, s32 table_count) {
     bfbb_save_file_write_scene_block_stuff(bw, block); // TODO(jelly): name this better for godsake
     for (int i =0; i < arrlen(block->scene.base); i++) {
-        bfbb_save_file_write_scene_block(bw, &table[i], i, block);
+        if (i < table_count) bfbb_save_file_write_scene_block(bw, &table[i], i, block);
+        else {
+            // TODO(jelly): diagnostic?
+            assert(0);
+        }
     }
     unsigned char *data = b->bytes + b->size;
     int n = block->header.bytes_used;
     b->size += n;
 }
-
-#define CaseSceneWrite(bw, block, b, is_gci, fourcc) case FOURCC_##fourcc: bfbb_save_file_write_scene(bw, block, fourcc##_table, b, is_gci); break;
 
 bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_file_block *block, int is_gci) {
     int is_gdat = block->header.id == FOURCC_GDAT;
@@ -1078,59 +1025,6 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 }
                 b->size+=size_to_write;
             } break;
-            CaseSceneWrite(&bw, block, b, is_gci, JF01);
-            CaseSceneWrite(&bw, block, b, is_gci, JF02);
-            CaseSceneWrite(&bw, block, b, is_gci, JF03);
-            CaseSceneWrite(&bw, block, b, is_gci, JF04);
-            CaseSceneWrite(&bw, block, b, is_gci, KF01);
-            CaseSceneWrite(&bw, block, b, is_gci, KF02);
-            CaseSceneWrite(&bw, block, b, is_gci, KF04);
-            CaseSceneWrite(&bw, block, b, is_gci, KF05);
-            CaseSceneWrite(&bw, block, b, is_gci, MNU3);
-            CaseSceneWrite(&bw, block, b, is_gci, RB01);
-            CaseSceneWrite(&bw, block, b, is_gci, RB02);
-            CaseSceneWrite(&bw, block, b, is_gci, RB03);
-            CaseSceneWrite(&bw, block, b, is_gci, SM01);
-            CaseSceneWrite(&bw, block, b, is_gci, SM02);
-            CaseSceneWrite(&bw, block, b, is_gci, SM03);
-            CaseSceneWrite(&bw, block, b, is_gci, SM04);
-            CaseSceneWrite(&bw, block, b, is_gci, B101);
-            CaseSceneWrite(&bw, block, b, is_gci, B201);
-            CaseSceneWrite(&bw, block, b, is_gci, B302);
-            CaseSceneWrite(&bw, block, b, is_gci, B303);
-            CaseSceneWrite(&bw, block, b, is_gci, BB01);
-            CaseSceneWrite(&bw, block, b, is_gci, BB02);
-            CaseSceneWrite(&bw, block, b, is_gci, BB03);
-            CaseSceneWrite(&bw, block, b, is_gci, BB04);
-            CaseSceneWrite(&bw, block, b, is_gci, BC01);
-            CaseSceneWrite(&bw, block, b, is_gci, BC02);
-            CaseSceneWrite(&bw, block, b, is_gci, BC03);
-            CaseSceneWrite(&bw, block, b, is_gci, BC04);
-            CaseSceneWrite(&bw, block, b, is_gci, BC05);
-            CaseSceneWrite(&bw, block, b, is_gci, DB01);
-            CaseSceneWrite(&bw, block, b, is_gci, DB02);
-            CaseSceneWrite(&bw, block, b, is_gci, DB03);
-            CaseSceneWrite(&bw, block, b, is_gci, DB04);
-            CaseSceneWrite(&bw, block, b, is_gci, DB06);
-            CaseSceneWrite(&bw, block, b, is_gci, GL01);
-            CaseSceneWrite(&bw, block, b, is_gci, GL02);
-            CaseSceneWrite(&bw, block, b, is_gci, GL03);
-            CaseSceneWrite(&bw, block, b, is_gci, GY01);
-            CaseSceneWrite(&bw, block, b, is_gci, GY02);
-            CaseSceneWrite(&bw, block, b, is_gci, GY03);
-            CaseSceneWrite(&bw, block, b, is_gci, GY04);
-            CaseSceneWrite(&bw, block, b, is_gci, HB00);
-            CaseSceneWrite(&bw, block, b, is_gci, HB01);
-            CaseSceneWrite(&bw, block, b, is_gci, HB02);
-            CaseSceneWrite(&bw, block, b, is_gci, HB03);
-            CaseSceneWrite(&bw, block, b, is_gci, HB04);
-            CaseSceneWrite(&bw, block, b, is_gci, HB05);
-            CaseSceneWrite(&bw, block, b, is_gci, HB06);
-            CaseSceneWrite(&bw, block, b, is_gci, HB07);
-            CaseSceneWrite(&bw, block, b, is_gci, HB08);
-            CaseSceneWrite(&bw, block, b, is_gci, HB09);
-            CaseSceneWrite(&bw, block, b, is_gci, HB10);
-            CaseSceneWrite(&bw, block, b, is_gci, PG12);
             case(FOURCC_CNTR):
             {
                 bit_push(&bw, 1, 1);
@@ -1150,7 +1044,21 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 b->size+=size_to_write;
                 break;
             }
-            default: write_bytes(b, block->raw_bytes, size_to_write);
+            default: {
+                if (bfbb_save_file_fourcc_looks_like_scene(block->header.id)) {
+                    const scene_table_meta *m = get_scene_table_meta(block->header.id);
+                    if (m) {
+                        bfbb_save_file_write_scene(b, &bw, block, m->table, m->count);
+                    } else {
+                        char* chars = block->header.id_chars;
+                        printf("Unknown block: %c%c%c%c", chars[3], chars[2], chars[1], chars[0]);
+                        assert(0);
+                    }
+                } else {
+                    // TODO(jelly): check to make sure it's a block that we know about?
+                    write_bytes(b, block->raw_bytes, size_to_write);
+                }
+            }
         }
     }
     
@@ -1170,23 +1078,15 @@ void bfbb_save_file_append_sfil(bfbb_save_file *save_file, write_buffer *b, int 
     }
     //size_of_data = b->size;
     //TODO(Will): Figure out how to actually fucking do this :)
-    u32 sfil_size = 0xBB88;
-    //if (is_gci) sfil_size -= 0x6040; // NOTE(jelly): size of entire gci header
+    u32 sfil_size = 0xc808 - size_of_data + 1036 + 8;
+    assert(b->size + sfil_size < b->max_size);
+    if (is_gci) sfil_size -= 0x6040; // NOTE(jelly): size of entire gci header
     u32 sfil_bytes_used = 8;
     
-    // TODO(jelly): remove if statement to only be what's in the else now that byteswapping is all done in bulk
-    is_gci = 0;
-    if (is_gci) {
-        unsigned char sfil_id[] = {
-            0x53, 0x46, 0x49, 0x4C
-        };
-        write_bytes(b, sfil_id, sizeof(sfil_id));
-    } else {
-        unsigned char sfil_id[] = {
-            0x4C, 0x49, 0x46, 0x53
-        };
-        write_bytes(b, sfil_id, sizeof(sfil_id));
-    }
+    unsigned char sfil_id[] = {
+        0x4C, 0x49, 0x46, 0x53
+    };
+    write_bytes(b, sfil_id, sizeof(sfil_id));
     write_bytes(b, (unsigned char *)&sfil_size, sizeof(sfil_size));
     write_bytes(b, (unsigned char *)&sfil_bytes_used, sizeof(sfil_bytes_used));
     write_bytes(b, (unsigned char *)"RyanNeil", 8);
