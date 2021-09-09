@@ -147,7 +147,7 @@ typedef struct {
     s32 total_socks;
     char cutscene_played[14];
     //NOTE(Will): this stores 6 bits, i have no clue what they do :)
-    u8 idiot_levels;
+    u8 idiot_levels[6];
 } bfbb_save_file_block_plyr;
 
 typedef struct {
@@ -709,7 +709,10 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 {
                     p.cutscene_played[i] = (char)bit_eat_s32(&br);
                 }
-                p.idiot_levels = (u32)bit_eat(&br, 6);
+                for(int i = 0; i<6; i++)
+                {
+                    p.idiot_levels[i] = bit_eat(&br, 1);
+                }
                 block->plyr = p;
                 break;
             }
@@ -1068,7 +1071,11 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 {
                     bit_push_s32(&bw, block->plyr.cutscene_played[i]);
                 }
-                bit_push(&bw, block->plyr.idiot_levels, 6);
+                
+                for(int i = 0; i<6; i++)
+                {
+                    bit_push(&bw, block->plyr.idiot_levels[i], 1);
+                }
                 b->size+=size_to_write;
             } break;
             CaseSceneWrite(&bw, block, b, is_gci, JF01);
