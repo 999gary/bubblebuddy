@@ -923,6 +923,7 @@ void bfbb_save_file_write_scene_block(bit_writer *b, scene_table_entry* p, s32 n
         case BASE_TYPE_DISPATCHER:
         {
             bit_push(b, bt.dispatcher.base_enable, 1);
+            
             break;
         }
         case BASE_TYPE_COND:

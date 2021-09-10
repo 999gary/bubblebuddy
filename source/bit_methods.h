@@ -345,6 +345,7 @@ int bit_push(bit_writer *b, u64 bits, u32 count) {
         }
         return 1;
     } else {
+        bits &= (1ULL << count) - 1;
         if (b->at + count <= b->count*8) {
             u32 byte_index = b->at / 8;
             u32 bit_index = b->at % 8;
