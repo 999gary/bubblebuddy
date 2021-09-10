@@ -6,11 +6,11 @@ TODO(jelly): STATE OF THE PROGRAM
 -THE GUI FUCKING SUCKS, FUCKING FIX IT - not fixed
 -PLYR block is still broken!
 -SFIL block is the wrong size
--Add a load file button - fixed (almost)
 -Stop clamping things please lemme finish the game at like 100000% - fixed (mostly outside of things that will break)
 -Port to linux
--Port to emscripten
--just generally clean up the code it's pretty garbage
+-Port to emscripten - in progress
+-just generally clean up the code it's pretty garbage - in progress
+-Make a good theme
 
 */
 
@@ -127,7 +127,7 @@ void hit_top_panel(hit_main *cv)
             cv->screen = 1;
         }
 #endif
-        if(nk_menu_begin_text(cv->nk_ctx, "Save Edit Menu", 14, NK_TEXT_ALIGN_CENTERED, nk_vec2(window_width/3.0f, (window_height/20.0f)*(cv->save_file.block_count))))
+        if(nk_menu_begin_symbol_text(cv->nk_ctx, "Save Edit Menu", 14, NK_TEXT_ALIGN_CENTERED, NK_SYMBOL_TRIANGLE_DOWN, nk_vec2(window_width/3.0f, (window_height/20.0f)*(cv->save_file.block_count))))
         {
             nk_layout_row_dynamic(cv->nk_ctx, window_height/40.0f, 3);
             if(nk_menu_item_label(cv->nk_ctx, "General", NK_TEXT_ALIGN_CENTERED))
@@ -405,7 +405,18 @@ void hit_s1_spats_set_all_to(nk_context *ctx, float row_height, bfbb_save_file_b
     }
     nk_labelf(ctx, NK_TEXT_ALIGN_CENTERED, label);
 }
+/*
+char* get_cheat_label_by_id(u8 id)
+{
+    char* table[] = {
+        "Art Theatre",
+        "Add Spatulas",
+        "Add Shinies",
+        "",
 
+    }
+}
+*/
 void hit_s1_data(hit_main *cv)
 {
     if(!cv->save_file_is_loaded)
@@ -553,14 +564,50 @@ void hit_s1_data(hit_main *cv)
                                     }
                                 }
                             }
-                            /*
+                            nk_layout_row_dynamic(cv->nk_ctx, row_height, 2);
                             for(int k = 0; k<15; k++)
                             {
-                                // TODO(jelly): make this editable
-                                nk_layout_row_dynamic(cv->nk_ctx, row_height, 1);
-                                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_LEFT, "%x", block->cntr.robot_data[k]);
+                                s16* rbdata = &block->cntr.robot_data[k];
+                                s16 r = *rbdata;
+                                Clamp(r, 0, 9);
+                                char rbdata_str[8] = {0};
+                                rbdata_str[0] = r + '0';
+                                //TODO(Will): Add robot names.
+                                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Robot #%d", k+1);
+                                if(nk_button_label(cv->nk_ctx, rbdata_str))
+                                {
+                                    if(*rbdata == 2)
+                                    {
+                                        *rbdata = 0;
+                                    }
+                                    else
+                                    {
+                                        *rbdata += 1;
+                                    }
+                                }
                             }
-                        */
+                            nk_layout_row_dynamic(cv->nk_ctx, row_height, 1);
+                            s32 sock_cntr = block->cntr.reminder_sock_cntr;
+                            nk_property_int(cv->nk_ctx, "#Reminder Sock CNTR", 0, &sock_cntr, INT16_MAX, 1, 1);
+                            block->cntr.reminder_sock_cntr = sock_cntr;
+                            nk_layout_row_dynamic(cv->nk_ctx, row_height, 4);
+                            u8 flags[16];
+                            s32 state = block->cntr.cheats;
+                            char buffer[10];
+                            for(int k = 0; k<16; k++)
+                            {
+                                memset(buffer, 0, 10);
+                                flags[k] = state & 1;
+                                state >>= 1;
+                                sprintf(buffer, "Cheat #%d", k+1);
+                                nk_checkbox_label_u8(cv->nk_ctx, buffer, &flags[k]);
+                            }
+                            state = 0;
+                            for(int k = 16; k>=0; k--)
+                            {
+                                state |= (s32)flags[k] << k;
+                            }
+                            block->cntr.cheats = state;
                             break;
                         }
                     }
@@ -651,6 +698,7 @@ void hit_update_and_render(hit_main *cv)
             break;
         }
     }
+    set_style(cv->nk_ctx, CURRENT_THEME);
 }
 
 

@@ -15,5 +15,6 @@
 #define NK_IMPLEMENTATION
 #define NK_D3D9_IMPLEMENTATION
 #include "nuklear.h"
+#include "style.c"
 #include <d3d9.h>
 #include "nuklear_d3d9.h"

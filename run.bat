@@ -1,4 +1,4 @@
 build.bat
 cd build
-himt.exe
+bubblebuddy.exe
 cd ..

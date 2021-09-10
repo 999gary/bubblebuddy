@@ -3,7 +3,7 @@ A Multi Tool for BFBB ( Currently only a save editor but HIPHOP tools are planne
 
 ## How to use
 
-1. Download `himt.exe` [here](https://github.com/999gary/bubblebuddy/releases).
+1. Download `bubblebuddy.exe` [here](https://github.com/999gary/bubblebuddy/releases).
 2. Use the program.
 
 ## Build

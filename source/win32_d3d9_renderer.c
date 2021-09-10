@@ -248,7 +248,7 @@ int hit_init(hit_main *cv) {
     
     AdjustWindowRectEx(&rect, style, FALSE, exstyle);
     
-    wnd = CreateWindowExW(exstyle, wc.lpszClassName, L"BFBB Save Editor",
+    wnd = CreateWindowExW(exstyle, wc.lpszClassName, L"BFBB Save Editor v" APP_VERSION,
                           style | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
                           rect.right - rect.left, rect.bottom - rect.top,
                           NULL, NULL, wc.hInstance, NULL);

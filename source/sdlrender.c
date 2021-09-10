@@ -31,6 +31,13 @@ int hit_loop(void* argss)
 
 int main()
 {
+    #ifdef EMSCRIPTEN
+    EM_ASM(
+        FS.syncfs(true, function (err) {
+            // Error
+        });
+    );
+    #endif    
     hit_main cv = {0};
     cv.running = 1;
     SDL_Window *win;

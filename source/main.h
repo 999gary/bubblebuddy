@@ -15,6 +15,9 @@
 #define Maximum(a, b) ((a) > (b) ? (a) : (b))
 #define Clamp(v, a, b) ((v) < (a) ? (a) : (v) > (b) ? (b) : (v))
 
+int is_uppercase_letter(u8);
+int is_digit(u8);
+
 #include "bfbb_save.h"
 
 #ifdef _WIN32
