@@ -15,9 +15,6 @@
 #define Maximum(a, b) ((a) > (b) ? (a) : (b))
 #define Clamp(v, a, b) ((v) < (a) ? (a) : (v) > (b) ? (b) : (v))
 
-int is_uppercase_letter(u8);
-int is_digit(u8);
-
 #include "bfbb_save.h"
 
 #ifdef _WIN32
@@ -32,7 +29,7 @@ int is_digit(u8);
 
 typedef struct nk_context nk_context;
 typedef struct {
-    nk_context *nk_ctx; //nuklear context
+    nk_context *nk_ctx;
     int running;
     int screen;
     int s1_adv;
@@ -47,5 +44,6 @@ typedef struct {
 
 void hit_common_init(hit_main *cv);
 void hit_update_and_render(hit_main *cv);
+void hit_try_load_save(hit_main *cv, char *path);
 
 #endif //MAIN_H

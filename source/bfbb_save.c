@@ -7,6 +7,7 @@
 
 #include "bfbb_gci_header.h"
 #include "bfbb_save.h"
+#include "saves/100save.h"
 #include "scenedata/all.h"
 #include "scene_tabs.h"
 #include "hmac_sha1.c"

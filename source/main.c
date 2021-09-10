@@ -58,6 +58,7 @@ unsigned char hex_char_to_nibble(char hex_char) {
 }
 
 unsigned char *read_entire_file(char *path, int *size) {
+    const int MAX_READ_FILE_SIZE = 128*1024; // NOTE(jelly): i think this is a good upper bound
     int n; 
     unsigned char *result = 0;
     FILE *in = fopen(path, "rb");
@@ -66,10 +67,12 @@ unsigned char *read_entire_file(char *path, int *size) {
         fseek(in, 0, SEEK_END);
         n = ftell(in);
         rewind(in);
-        result = malloc(n);
-        fread(result, 1, n, in);
-        fclose(in);
-        *size = n;
+        if (n > 0 && n < MAX_READ_FILE_SIZE) {
+            result = malloc(n);
+            fread(result, 1, n, in);
+            fclose(in);
+            *size = n;
+        }
     }
     return result;
 }
@@ -83,28 +86,37 @@ void hit_message_box_ok_fmt(char *caption, char *message_fmt, ...) {
     hit_message_box_ok(caption, buffer);
 }
 
+void hit_try_load_save(hit_main *cv, char *path) {
+    FILE *in = fopen(path, "rb");
+    if (in) {
+        int size = 0;
+        unsigned char *data = read_entire_file(path, &size);
+        if (data) {
+            if (bfbb_save_file_read(&cv->save_file, data, size)) {
+                cv->save_file_is_loaded = 1;
+                memset(cv->s1_fpath, 0, sizeof(cv->s1_fpath));
+                memcpy(cv->s1_fpath, path, strlen(path));
+            } else {
+                hit_message_box_ok_fmt("Failed to Load Save File", 
+                                       "'%s' doesn't appear to be a valid"
+                                       " BFBB save file in a format that we support. Sorry. :(", path);
+            }
+            free(data);
+        } else {
+            hit_message_box_ok_fmt("Failed to Load Save File", "'%s' looks too big to be BFBB save file. Sorry :(", path);
+        }
+    } else {
+        hit_message_box_ok_fmt("Failed to Load Save File", "Couldn't open file '%s'. Sorry :(", path);
+    }
+}
+
 void hit_load_save(hit_main *cv)
 {
     bfbb_save_file_free_blocks(&cv->save_file);
     char buffer[4096] = {0};
     if(!hit_file_select_read(buffer, sizeof(buffer)))
     {
-        FILE *in = fopen(buffer, "rb");
-        if (in) {
-            int size = 0;
-            unsigned char *data = read_entire_file(buffer, &size);
-            bfbb_save_file save_file;
-            if (bfbb_save_file_read(&cv->save_file, data, size)) {
-                cv->save_file_is_loaded = 1;
-                memcpy(cv->s1_fpath, buffer, sizeof(buffer));
-            } else {
-                hit_message_box_ok_fmt("Failed to Load Save File", 
-                                       "'%s' doesn't appear to be a valid"
-                                       " BFBB save file in a format that we support. Sorry. :(", buffer);
-            }
-        } else {
-            hit_message_box_ok_fmt("Failed to Load Save File", "Couldn't open file '%s'. Sorry :(", buffer);
-        }
+        hit_try_load_save(cv, buffer);
     }
 }
 
@@ -126,7 +138,9 @@ void hit_top_panel(hit_main *cv)
             cv->screen = 1;
         }
 #endif
-        if(nk_menu_begin_symbol_text(cv->nk_ctx, "Save Edit Menu", 14, NK_TEXT_CENTERED, NK_SYMBOL_TRIANGLE_DOWN, nk_vec2(window_width/3.0f, (window_height/20.0f)*(cv->save_file.block_count))))
+        if(cv->save_file_is_loaded &&
+           nk_menu_begin_symbol_text(cv->nk_ctx, "Save Edit Menu", 14, NK_TEXT_CENTERED, NK_SYMBOL_TRIANGLE_DOWN, 
+                                     nk_vec2(window_width/3.0f, (window_height/20.0f)*(cv->save_file.block_count))))
         {
             nk_layout_row_dynamic(cv->nk_ctx, window_height/40.0f, 3);
             if(nk_menu_item_label(cv->nk_ctx, "General", NK_TEXT_CENTERED))
@@ -446,6 +460,7 @@ void hit_s1_data(hit_main *cv)
             for(int i = 0; i < block_count; i++)
             {
                 bfbb_save_file_block *block = &blocks[i];
+                u32 id = block->header.id;
                 if(!is_drawable_block(block))
                     continue;
                 if(kj == 0)
@@ -454,13 +469,15 @@ void hit_s1_data(hit_main *cv)
                     nk_layout_row_dynamic(cv->nk_ctx, win_height/1.5f, 2);
                 kj++;
                 
-                char *title = stringifiy_fourcc(block->header.id).chars;
+                char *title = stringifiy_fourcc(id).chars;
                 
                 float row_height = win_height/3.0f/8.0f;
                 
-                if(nk_group_begin_titled(cv->nk_ctx, title, title, NK_WINDOW_BORDER | NK_WINDOW_TITLE))
+                nk_flags flags = NK_WINDOW_BORDER | NK_WINDOW_TITLE;
+                if (id == FOURCC_PREF) flags |= NK_WINDOW_NO_SCROLLBAR;
+                if(nk_group_begin_titled(cv->nk_ctx, title, title, flags))
                 {
-                    switch(blocks[i].header.id)
+                    switch(id)
                     {
                         case(FOURCC_LEDR):
                         { 
@@ -472,7 +489,7 @@ void hit_s1_data(hit_main *cv)
                             nk_property_int(cv->nk_ctx, "ID:", 0, &block->ledr.thumbnail_index, 13, 1, 1);
                             nk_layout_row_dynamic(cv->nk_ctx, row_height, 1);
                             nk_property_int(cv->nk_ctx, "Progress", 0, &block->ledr.progress, 100, 1, .5);
-                            break;  
+                            break;
                         }
                         case(FOURCC_ROOM):
                         {
@@ -545,7 +562,7 @@ void hit_s1_data(hit_main *cv)
                                 {
                                     s16* spat = &block->cntr.spats[k][j];
                                     s16 s = *spat;
-                                    Clamp(s, 0, 9);
+                                    s = Clamp(s, 0, 9);
                                     char spat_str[8] = {0};
                                     spat_str[0] = s + '0';
                                     if(nk_button_label(cv->nk_ctx, spat_str))
@@ -647,7 +664,6 @@ void hit_s1_bottom_panel(hit_main *cv)
         }
         if(nk_button_label(cv->nk_ctx, "Load File"))
         {
-            //TODO(Will): Stop this from breaking after a few clicks
             hit_load_save(cv);
         }
         cv->s1_adv = 1;
@@ -702,6 +718,9 @@ void hit_update_and_render(hit_main *cv)
 void hit_common_init(hit_main *cv)
 {
     //hit_load_save(cv);
+    // TODO(jelly): actually set the save file data struct instead of doing this laziness
+    bfbb_save_file_read(&cv->save_file, save_data_100, sizeof(save_data_100));
+    cv->save_file_is_loaded = 1;
     
     //TODO(Will): Make this all one function
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE

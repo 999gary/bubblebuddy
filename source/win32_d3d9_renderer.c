@@ -1,6 +1,8 @@
 
 #include "opensans_font.h"
 
+#pragma comment(lib, "shell32.lib")
+
 static HWND window_handle;
 
 static inline unsigned long long  win32_get_performance_counter() {
@@ -103,6 +105,17 @@ WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         case WM_SIZE: {
             win32_resize(LOWORD(lparam), HIWORD(lparam));
         } break;
+        
+        case WM_DROPFILES: {
+            HDROP h = (HDROP) wparam;
+            
+            UINT index = 0;// NOTE(jelly): let's only accept the first dropped file.
+            char path_buffer[4096] = {0};
+            if (DragQueryFileA(h, index, path_buffer, sizeof(path_buffer))) {
+                hit_try_load_save(cv, path_buffer);
+            }
+        } break;
+        
         case WM_DESTROY: {
             PostQuitMessage(0);
             return 0;
@@ -222,7 +235,7 @@ int hit_file_select_write(char* path, int max_path_len, int *save_as_gci, int *e
 }
 
 void hit_message_box_ok(char *caption, char *message) {
-    MessageBoxA(0, message, caption, MB_OK);
+    MessageBoxA(0, message, caption, MB_OK | MB_ICONWARNING);
 }
 
 int hit_init(hit_main *cv) {
@@ -256,6 +269,7 @@ int hit_init(hit_main *cv) {
     window_handle = wnd;
     
     SetWindowLongPtr(wnd, GWLP_USERDATA, (LONG_PTR)cv);
+    DragAcceptFiles(wnd, TRUE);
     
     create_d3d9_device(wnd);
     /* GUI */
