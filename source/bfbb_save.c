@@ -176,6 +176,7 @@ void bfbb_save_file_free_blocks(bfbb_save_file *save_file) {
             arrfree(block->scene.base);
         }
     }
+    save_file->block_count = 0;
 }
 
 bfbb_save_file_block_header bfbb_save_file_block_header_parse(buffer *b, int is_gci) {

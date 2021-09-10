@@ -421,7 +421,7 @@ char* thumbnail_label_from_id(u32 id)
         "Mr. Krabs"
     };
     if (id < 0) id = 0;
-    if (id > 15) id = 15;
+    if (id > 14) id = 14;
     return lookup[id];
 }
 

@@ -11,7 +11,6 @@ TODO(jelly): STATE OF THE PROGRAM
 -Port to emscripten - in progress
 -just generally clean up the code it's pretty garbage - in progress
 -Make a good theme
-
 */
 
 #include "main.h"
@@ -127,10 +126,10 @@ void hit_top_panel(hit_main *cv)
             cv->screen = 1;
         }
 #endif
-        if(nk_menu_begin_symbol_text(cv->nk_ctx, "Save Edit Menu", 14, NK_TEXT_ALIGN_CENTERED, NK_SYMBOL_TRIANGLE_DOWN, nk_vec2(window_width/3.0f, (window_height/20.0f)*(cv->save_file.block_count))))
+        if(nk_menu_begin_symbol_text(cv->nk_ctx, "Save Edit Menu", 14, NK_TEXT_CENTERED, NK_SYMBOL_TRIANGLE_DOWN, nk_vec2(window_width/3.0f, (window_height/20.0f)*(cv->save_file.block_count))))
         {
             nk_layout_row_dynamic(cv->nk_ctx, window_height/40.0f, 3);
-            if(nk_menu_item_label(cv->nk_ctx, "General", NK_TEXT_ALIGN_CENTERED))
+            if(nk_menu_item_label(cv->nk_ctx, "General", NK_TEXT_CENTERED))
             {
                 cv->s1_scene_id = 0;
             }
@@ -145,7 +144,7 @@ void hit_top_panel(hit_main *cv)
                         nk_layout_row_dynamic(cv->nk_ctx, window_height/40.0f, 3);
                     }
                     small_string label = stringifiy_fourcc(b.header.id);
-                    if(nk_menu_item_label(cv->nk_ctx, label.chars, NK_TEXT_ALIGN_CENTERED))
+                    if(nk_menu_item_label(cv->nk_ctx, label.chars, NK_TEXT_CENTERED))
                     {
                         cv->s1_scene_id = b.header.id;
                     }
@@ -172,7 +171,7 @@ void hit_s0_data(hit_main *cv)
     if(nk_begin(cv->nk_ctx, "Data Panel", nk_rect(0, win_height_offset, window_width, win_height), NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR))
     {
         nk_layout_row_dynamic(cv->nk_ctx, win_height/20.0f, 3);
-        nk_label(cv->nk_ctx, cv->hiphop->hipa.block.block_id, NK_TEXT_ALIGN_LEFT);
+        nk_label(cv->nk_ctx, cv->hiphop->hipa.block.block_id, NK_TEXT_LEFT);
     }
     nk_end(cv->nk_ctx);
 }
@@ -190,7 +189,7 @@ void nk_menu_begin_labelf(struct nk_context *ctx, nk_flags align, struct nk_vec2
     
     va_list args;
     va_start(args, fmt);
-    int result = vsnprintf(buffer, 2048, fmt, args);
+    int result = vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
     
     nk_menu_begin_label(ctx, buffer, align, size);
@@ -205,8 +204,8 @@ void nk_checkbox_label_u8(nk_context* ctx, const char * label, u8* value)
 
 void nk_base_type_begin(nk_context *ctx, float row_height, u32 id, u32 type) {
     nk_layout_row_dynamic(ctx, row_height, 2);
-    nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, "ID: %x", id);
-    nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, "Type: %s", get_base_type_name(type));
+    nk_labelf(ctx, NK_TEXT_LEFT, "ID: %x", id);
+    nk_labelf(ctx, NK_TEXT_LEFT, "Type: %s", get_base_type_name(type));
 }
 
 void nk_base_enabled_and_shown(nk_context *ctx, float row_height, u8 *enabled, u8 *shown) {
@@ -235,22 +234,22 @@ void hit_s1_scene_switch(hit_main *cv, bfbb_save_file_block* block, int j, float
             u8 flag[7];
             //printf("%x\n", b->pickup.state);
             u8 state = b->pickup.state;
-            for(int i = 0; i<7; i++)
+            for(int i = 0; i<ArrayCount(flag); i++)
             {
                 flag[i] = state & 1;
                 state >>= 1;
             }
             nk_base_enabled_and_shown(cv->nk_ctx, row_height, &b->pickup.base_enable, &b->pickup.show_ent);
             nk_layout_row_dynamic(cv->nk_ctx, row_height, 4);
-            char buffer[128];
-            for(int i = 0; i<7; i++)
+            char buffer[256];
+            for(int i = 0; i<ArrayCount(flag); i++)
             {
-                sprintf(buffer, "Flag #%d", i+1);
+                snprintf(buffer, sizeof(buffer), "Flag #%d", i+1);
                 nk_checkbox_label_u8(cv->nk_ctx, buffer, &flag[i]);
-                memset(buffer, 0, 128);
+                memset(buffer, 0, sizeof(buffer));
             }
             state = 0;
-            for (int i = 7; i>=0; i--)
+            for (int i = 0; i < ArrayCount(flag); i++)
             {
                 state |= flag[i] << i;
             }
@@ -383,7 +382,7 @@ void hit_s1_scene_screen(hit_main* cv, scene_table_entry* table, char* id, float
         if(!(kj%3))
             nk_layout_row_dynamic(cv->nk_ctx, win_height*(1.0f/3.0f), 3);
         kj++;
-        if(nk_group_begin_titled(cv->nk_ctx, table[i].name, table[i].name, NK_WINDOW_BORDER | NK_WINDOW_TITLE))
+        if(nk_group_begin_titled(cv->nk_ctx, table[i].name, table[i].name, NK_WINDOW_BORDER | NK_WINDOW_TITLE | NK_WINDOW_NO_SCROLLBAR))
         {
             hit_s1_scene_switch(cv, b, i, win_height);
             nk_group_end(cv->nk_ctx);
@@ -403,7 +402,7 @@ void hit_s1_spats_set_all_to(nk_context *ctx, float row_height, bfbb_save_file_b
             }
         }
     }
-    nk_labelf(ctx, NK_TEXT_ALIGN_CENTERED, label);
+    nk_labelf(ctx, NK_TEXT_CENTERED, label);
 }
 /*
 char* get_cheat_label_by_id(u8 id)
@@ -454,10 +453,8 @@ void hit_s1_data(hit_main *cv)
                 else if(!(kj%3))
                     nk_layout_row_dynamic(cv->nk_ctx, win_height/1.5f, 2);
                 kj++;
-                char title[16] = {0};
-                for (int j = 0; j < 4; j++) {
-                    title[j] = block->header.id_chars[3-j];
-                }
+                
+                char *title = stringifiy_fourcc(block->header.id).chars;
                 
                 float row_height = win_height/3.0f/8.0f;
                 
@@ -468,10 +465,10 @@ void hit_s1_data(hit_main *cv)
                         case(FOURCC_LEDR):
                         { 
                             nk_layout_row_dynamic(cv->nk_ctx, row_height, 2);
-                            nk_label(cv->nk_ctx, "Game Label:", NK_TEXT_ALIGN_CENTERED);
+                            nk_label(cv->nk_ctx, "Game Label:", NK_TEXT_CENTERED);
                             nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, blocks[i].ledr.game_label, 64, (nk_plugin_filter)NK_FILTER_INT);
                             nk_layout_row_dynamic(cv->nk_ctx, row_height, 2);
-                            nk_label(cv->nk_ctx, thumbnail_label_from_id(block->ledr.thumbnail_index), NK_TEXT_ALIGN_CENTERED);
+                            nk_label(cv->nk_ctx, thumbnail_label_from_id(block->ledr.thumbnail_index), NK_TEXT_CENTERED);
                             nk_property_int(cv->nk_ctx, "ID:", 0, &block->ledr.thumbnail_index, 13, 1, 1);
                             nk_layout_row_dynamic(cv->nk_ctx, row_height, 1);
                             nk_property_int(cv->nk_ctx, "Progress", 0, &block->ledr.progress, 100, 1, .5);
@@ -481,7 +478,7 @@ void hit_s1_data(hit_main *cv)
                         {
                             //TODO(Will): Make this a selection box
                             nk_layout_row_dynamic(cv->nk_ctx, row_height, 2);
-                            nk_label(cv->nk_ctx, "Room:", NK_TEXT_ALIGN_CENTERED);
+                            nk_label(cv->nk_ctx, "Room:", NK_TEXT_CENTERED);
                             nk_edit_string_zero_terminated(cv->nk_ctx, NK_EDIT_FIELD, block->room.sceneid, 5, (nk_plugin_filter)NK_FILTER_INT);
                             break;
                         }
@@ -517,18 +514,18 @@ void hit_s1_data(hit_main *cv)
                             for(int k = 0; k<LEVEL_COUNT - 2; k++)
                             {
                                 nk_layout_row_dynamic(cv->nk_ctx, row_height, 1);
-                                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_LEFT, "%s:", thumbnail_label_from_id(k));
+                                nk_labelf(cv->nk_ctx, NK_TEXT_LEFT, "%s:", thumbnail_label_from_id(k));
                                 nk_layout_row_dynamic(cv->nk_ctx, row_height, 2);
                                 nk_property_int(cv->nk_ctx, "#Socks", INT_MIN, &block->plyr.level_collectables[k].socks, INT_MAX, 1, 1);
                                 nk_property_int(cv->nk_ctx, "#Pickups", INT_MIN, &block->plyr.level_collectables[k].pickups, INT_MAX, 1, 1);
                             }
                             nk_layout_row_dynamic(cv->nk_ctx, row_height, 1);
                             nk_property_int(cv->nk_ctx, "#Total Socks", INT_MIN, &block->plyr.total_socks, INT_MAX, 1, 1);nk_layout_row_dynamic(cv->nk_ctx, row_height, 4);
-                            char buffer[12];
+                            char buffer[256];
                             for(int k = 0; k<14; k++)
                             {
-                                memset(buffer, 0, 12);
-                                sprintf(buffer, "Cutscene %d", k+1);
+                                memset(buffer, 0, sizeof(buffer));
+                                snprintf(buffer, sizeof(buffer), "Cutscene %d", k+1);
                                 nk_checkbox_label_u8(cv->nk_ctx, buffer, &block->plyr.cutscene_played[k]);
                             }
                             break;
@@ -542,7 +539,7 @@ void hit_s1_data(hit_main *cv)
                             {
                                 nk_layout_row_begin(cv->nk_ctx, NK_DYNAMIC, row_height, 20);
                                 nk_layout_row_push(cv->nk_ctx, .41f);
-                                nk_label(cv->nk_ctx, thumbnail_label_from_id(k), NK_TEXT_ALIGN_RIGHT);
+                                nk_label(cv->nk_ctx, thumbnail_label_from_id(k), NK_TEXT_RIGHT);
                                 nk_layout_row_push(cv->nk_ctx, .080f);
                                 for(int j = 0; j<spat_count_per_world[k]; j++)
                                 {
@@ -564,16 +561,16 @@ void hit_s1_data(hit_main *cv)
                                     }
                                 }
                             }
-                            nk_layout_row_dynamic(cv->nk_ctx, row_height, 2);
                             for(int k = 0; k<15; k++)
                             {
+                                nk_layout_row_dynamic(cv->nk_ctx, row_height, 2);
                                 s16* rbdata = &block->cntr.robot_data[k];
                                 s16 r = *rbdata;
                                 Clamp(r, 0, 9);
                                 char rbdata_str[8] = {0};
                                 rbdata_str[0] = r + '0';
                                 //TODO(Will): Add robot names.
-                                nk_labelf(cv->nk_ctx, NK_TEXT_ALIGN_CENTERED, "Robot #%d", k+1);
+                                nk_labelf(cv->nk_ctx, NK_TEXT_CENTERED, "Robot #%d", k+1);
                                 if(nk_button_label(cv->nk_ctx, rbdata_str))
                                 {
                                     if(*rbdata == 2)
@@ -593,17 +590,17 @@ void hit_s1_data(hit_main *cv)
                             nk_layout_row_dynamic(cv->nk_ctx, row_height, 4);
                             u8 flags[16];
                             s32 state = block->cntr.cheats;
-                            char buffer[10];
-                            for(int k = 0; k<16; k++)
+                            char buffer[256];
+                            for(int k = 0; k < ArrayCount(flags); k++)
                             {
-                                memset(buffer, 0, 10);
+                                memset(buffer, 0, sizeof(buffer));
                                 flags[k] = state & 1;
                                 state >>= 1;
-                                sprintf(buffer, "Cheat #%d", k+1);
+                                snprintf(buffer, sizeof(buffer), "Cheat #%d", k+1);
                                 nk_checkbox_label_u8(cv->nk_ctx, buffer, &flags[k]);
                             }
                             state = 0;
-                            for(int k = 16; k>=0; k--)
+                            for(int k = 0; k < ArrayCount(flags); k++)
                             {
                                 state |= (s32)flags[k] << k;
                             }
@@ -654,7 +651,7 @@ void hit_s1_bottom_panel(hit_main *cv)
             hit_load_save(cv);
         }
         cv->s1_adv = 1;
-        nk_label(cv->nk_ctx, cv->s1_fpath, NK_TEXT_ALIGN_CENTERED);
+        nk_label(cv->nk_ctx, cv->s1_fpath, NK_TEXT_CENTERED);
     }
     nk_end(cv->nk_ctx);
 }
