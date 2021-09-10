@@ -1,6 +1,7 @@
 
 #include "opensans_font.h"
 
+static HWND window_handle;
 
 static inline unsigned long long  win32_get_performance_counter() {
     LARGE_INTEGER result;
@@ -64,34 +65,43 @@ static void win32_d3d9_present(void) {
     NK_ASSERT(SUCCEEDED(hr));
 }
 
+static void win32_resize(u32 w, u32 h) {
+    if (device)
+    {
+        UINT width = w;
+        UINT height = h;
+        if (width != 0 && height != 0 &&
+            (width != present.BackBufferWidth || height != present.BackBufferHeight))
+        {
+            nk_d3d9_release();
+            present.BackBufferWidth = width;
+            present.BackBufferHeight = height;
+            HRESULT hr = IDirect3DDevice9_Reset(device, &present);
+            NK_ASSERT(SUCCEEDED(hr));
+            nk_d3d9_resize(width, height);
+        }
+        
+    }
+    window_width = w;
+    window_height = h;
+}
+
 static LRESULT CALLBACK
 WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     hit_main *cv = (hit_main *)GetWindowLongPtr(wnd, GWLP_USERDATA);
     
     switch (msg) {
         case WM_PAINT: {
+            /*
+            RECT r;
+            GetClientRect(window_handle, &r);
+            win32_resize(r.right, r.bottom);
+            */
             hit_update_and_render(cv);
             win32_d3d9_present();
         } break;
         case WM_SIZE: {
-            if (device)
-            {
-                UINT width = LOWORD(lparam);
-                UINT height = HIWORD(lparam);
-                if (width != 0 && height != 0 &&
-                    (width != present.BackBufferWidth || height != present.BackBufferHeight))
-                {
-                    nk_d3d9_release();
-                    present.BackBufferWidth = width;
-                    present.BackBufferHeight = height;
-                    HRESULT hr = IDirect3DDevice9_Reset(device, &present);
-                    NK_ASSERT(SUCCEEDED(hr));
-                    nk_d3d9_resize(width, height);
-                }
-                
-                window_width = width;
-                window_height = height;
-            }
+            win32_resize(LOWORD(lparam), HIWORD(lparam));
         } break;
         case WM_DESTROY: {
             PostQuitMessage(0);
@@ -100,7 +110,7 @@ WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     }
     if (nk_d3d9_handle_event(wnd, msg, wparam, lparam))
         return 0;
-    return DefWindowProcW(wnd, msg, wparam, lparam);
+    return DefWindowProcW(wnd, msg, wparam, lparam); 
 }
 
 static void create_d3d9_device(HWND wnd)
@@ -168,24 +178,44 @@ static void create_d3d9_device(HWND wnd)
 // NOTE(jelly): the two functions below return zero on success because C# is really cool
 int hit_file_select_read(char* path, int max_path_len)
 {
-    OPENFILENAMEA file = {0};
+    OPENFILENAME file = {0};
+    file.hwndOwner = window_handle;
     file.lpstrFile = path;
+    file.nFilterIndex = 1;
     file.nMaxFile = max_path_len;
     file.lStructSize = sizeof file;
     file.lpstrFilter = "All Files\0*.*\0\0";
-    return !GetOpenFileNameA(&file);
+    return !GetOpenFileName(&file);
+}
+
+char *get_extension(char *s) {
+    char *c = s + strlen(s) - 1;
+    while (c > s && *c != '.') c--;
+    if (c == s) return 0;
+    return c;
 }
 
 int hit_file_select_write(char* path, int max_path_len, int *save_as_gci, int *extension_supplied)
 {
-    OPENFILENAMEA file = {0};
+    OPENFILENAME file = {0};
+    file.hwndOwner = window_handle;
     file.lpstrFile = path;
     file.nMaxFile = max_path_len;
     file.lStructSize = sizeof file;
     file.lpstrFilter = "Xbox Save File\0.xsv\0Gamecube Save File\0.gci\0\0";
-    if (GetSaveFileNameA(&file)) {
+    if (GetSaveFileName(&file)) {
         *save_as_gci = (file.nFilterIndex - 1) != 0; // NOTE(jelly): clamping to 1 or 0
-        *extension_supplied = file.nFileExtension != 0;
+        if (file.nFileExtension != 0) {
+            *extension_supplied = 1;
+            char *ext = get_extension(path);
+            if (ext) {
+                if (!strcmp(ext, ".xsv")) *save_as_gci = 0;
+                if (!strcmp(ext, ".gci")) *save_as_gci = 1;
+            }
+        } else {
+            *extension_supplied = 0;
+        }
+        
         return 0;
     }
     return 1;
@@ -222,6 +252,8 @@ int hit_init(hit_main *cv) {
                           style | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
                           rect.right - rect.left, rect.bottom - rect.top,
                           NULL, NULL, wc.hInstance, NULL);
+    
+    window_handle = wnd;
     
     SetWindowLongPtr(wnd, GWLP_USERDATA, (LONG_PTR)cv);
     
@@ -276,18 +308,18 @@ int hit_init(hit_main *cv) {
         start_tick = end_tick;
     }
     
-    // TODO: fun fact if we know we're on windows, we know that windows is going to clean up for us so we actually don't have to
-    //nk_d3d9_shutdown();
-    //UnregisterClassW(wc.lpszClassName, wc.hInstance);
+    return 0;
 }
 
-/*int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) { 
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) { 
     hit_main hit_main = {0};
     hit_main.running = 1;
     return hit_init(&hit_main);
-}*/
+}
+/*
 int main() {    
     hit_main hit_main = {0};
     hit_main.running = 1;
     return hit_init(&hit_main);
 }
+*/

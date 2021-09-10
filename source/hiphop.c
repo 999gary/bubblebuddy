@@ -1,7 +1,3 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 //Created from this documentation :)
 //https://heavyironmodding.org/wiki/HIP_(File_Format)
