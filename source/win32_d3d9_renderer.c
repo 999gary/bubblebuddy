@@ -324,16 +324,16 @@ int hit_init(hit_main *cv) {
     
     return 0;
 }
-
+#if 0
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) { 
     hit_main hit_main = {0};
     hit_main.running = 1;
     return hit_init(&hit_main);
 }
-/*
+#else
 int main() {    
     hit_main hit_main = {0};
     hit_main.running = 1;
     return hit_init(&hit_main);
 }
-*/
+#endif

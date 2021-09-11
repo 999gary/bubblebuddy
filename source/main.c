@@ -18,6 +18,8 @@ TODO(jelly): STATE OF THE PROGRAM
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE
 #include "hiphop.c"
 #endif
+int is_digit(u8);
+int is_uppercase_letter(u8);
 #include "bfbb_save.c"
 
 static u32 window_width, window_height;

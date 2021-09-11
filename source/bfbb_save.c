@@ -418,6 +418,20 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 block->cntr = c;
                 break;
             }
+            //TODO(Will): Implement these :)
+            #ifdef BFBBMIX
+            case(FOURCC_EX01):
+            case(FOURCC_EX02):
+            case(FOURCC_EX03):
+            case(FOURCC_EX04):
+            case(FOURCC_EX05):
+            case(FOURCC_EX06):
+            case(FOURCC_EX07):
+            case(FOURCC_EX08):
+            case(FOURCC_EX09):
+            case(FOURCC_PG02):
+            case(FOURCC_PG13):
+            #endif
             case(FOURCC_LEDR):
             case(FOURCC_ROOM):
             case(FOURCC_PREF):
@@ -716,6 +730,19 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 b->size+=size_to_write;
                 break;
             }
+            #ifdef BFBBMIX
+            case(FOURCC_EX01):
+            case(FOURCC_EX02):
+            case(FOURCC_EX03):
+            case(FOURCC_EX04):
+            case(FOURCC_EX05):
+            case(FOURCC_EX06):
+            case(FOURCC_EX07):
+            case(FOURCC_EX08):
+            case(FOURCC_EX09):
+            case(FOURCC_PG02):
+            case(FOURCC_PG13): write_bytes(b, block->raw_bytes, size_to_write); break;
+            #endif
             default: {
                 if (bfbb_save_file_fourcc_looks_like_scene(block->header.id)) {
                     const scene_table_meta *m = get_scene_table_meta(block->header.id);

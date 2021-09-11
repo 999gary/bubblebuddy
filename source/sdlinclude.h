@@ -16,4 +16,5 @@
 #define NK_IMPLEMENTATION
 #define NK_SDL_GL2_IMPLEMENTATION
 #include "nuklear.h"
+#include "style.c"
 #include "nuklear_sdl_gl2.h"

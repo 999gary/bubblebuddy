@@ -361,6 +361,22 @@ typedef struct {
 #define FOURCC_HB10 FOURCC_CONST('H', 'B', '1', '0')
 #define FOURCC_PG12 FOURCC_CONST('P', 'G', '1', '2')
 
+#ifdef BFBBMIX
+#define FOURCC_B102 FOURCC_CONST('B', '1', '0', '2')
+#define FOURCC_DB05 FOURCC_CONST('D', 'B', '0', '5')
+#define FOURCC_EX01 FOURCC_CONST('E', 'X', '0', '1')
+#define FOURCC_EX02 FOURCC_CONST('E', 'X', '0', '2')
+#define FOURCC_EX03 FOURCC_CONST('E', 'X', '0', '3')
+#define FOURCC_EX04 FOURCC_CONST('E', 'X', '0', '4')
+#define FOURCC_EX05 FOURCC_CONST('E', 'X', '0', '5')
+#define FOURCC_EX06 FOURCC_CONST('E', 'X', '0', '6')
+#define FOURCC_EX07 FOURCC_CONST('E', 'X', '0', '7')
+#define FOURCC_EX08 FOURCC_CONST('E', 'X', '0', '8')
+#define FOURCC_EX09 FOURCC_CONST('E', 'X', '0', '9')
+#define FOURCC_PG02 FOURCC_CONST('P', 'G', '0', '2')
+#define FOURCC_PG13 FOURCC_CONST('P', 'G', '1', '3')
+#endif
+
 #define FOURCC_CNTR FOURCC_CONST('C', 'N', 'T', 'R')
 #define FOURCC_PREF FOURCC_CONST('P', 'R', 'E', 'F')
 #define FOURCC_SVID FOURCC_CONST('S', 'V', 'I', 'D')
