@@ -13,6 +13,7 @@
 #define BASE_TYPE_BUTTON      24
 #define BASE_TYPE_DISPATCHER  30
 #define BASE_TYPE_COND        31
+#define BASE_TYPE_UIFONT      33
 #define BASE_TYPE_CUTSCENEMGR 40
 #define BASE_TYPE_TELEPORTBOX 49
 #define BASE_TYPE_TASKBOX     53
@@ -183,6 +184,11 @@ typedef struct {
 typedef struct {
     u8 base_enable;
     u8 show_ent;
+} base_type_uifont;
+
+typedef struct {
+    u8 base_enable;
+    u8 show_ent;
     u8 opened;
     u32 player_state;
 } base_type_teleportbox;
@@ -214,6 +220,7 @@ struct base_type {
         base_type_button      button;
         base_type_dispatcher  dispatcher;
         base_type_cond        cond;
+        base_type_uifont      uifont;
         base_type_teleportbox tpbox;
         base_type_taskbox     taskbox;
         base_type_taxi        taxi;
@@ -375,6 +382,7 @@ base_type_and_name base_names[] = {
     {"Button"   ,   24},
     {"Dispatcher",  30},
     {"Cond"       , 31},
+    {"UI Font"    , 33},
     {"Cutscene Manager", 40},
     {"Teleport Box", 49},
     {"Task Box"    , 53},

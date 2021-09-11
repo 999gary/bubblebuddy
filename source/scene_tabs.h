@@ -2,6 +2,11 @@
 #define SCENE_TABS_H
 
 typedef struct { u32 id; void *table; int count; } scene_table_meta;
+#ifdef BFBBMIX
+const scene_table_meta scene_tabs[] = {
+    {FOURCC_HB01, (void *)HB01_table, ArrayCount(HB01_table)},
+};
+#else
 const scene_table_meta scene_tabs[] = {
     {FOURCC_JF01, (void *)JF01_table, ArrayCount(JF01_table)},
     {FOURCC_JF02, (void *)JF02_table, ArrayCount(JF02_table)},
@@ -57,5 +62,6 @@ const scene_table_meta scene_tabs[] = {
     {FOURCC_HB10, (void *)HB10_table, ArrayCount(HB10_table)},
     {FOURCC_PG12, (void *)PG12_table, ArrayCount(PG12_table)},
 };
+#endif
 
 #endif //SCENE_TABS_H

@@ -211,9 +211,9 @@ void nk_menu_begin_labelf(struct nk_context *ctx, nk_flags align, struct nk_vec2
 
 void nk_checkbox_label_u8(nk_context* ctx, const char * label, u8* value)
 {
-    nk_bool a = !*value;
+    nk_bool a = *value;
     nk_checkbox_label(ctx, label, &a);
-    *value = !a;
+    *value = a;
 }
 
 void nk_base_type_begin(nk_context *ctx, float row_height, u32 id, u32 type) {
@@ -343,6 +343,11 @@ void hit_s1_scene_switch(hit_main *cv, bfbb_save_file_block* block, int j, float
         {
             nk_layout_row_dynamic(cv->nk_ctx, row_height, 1);
             nk_checkbox_label_u8(cv->nk_ctx, "Enabled", &b->cond.base_enable);
+            break;
+        }
+        case(BASE_TYPE_UIFONT):
+        {
+            nk_base_enabled_and_shown(cv->nk_ctx, row_height, &b->uifont.base_enable, &b->uifont.show_ent);
             break;
         }
         case(BASE_TYPE_TASKBOX):
@@ -515,7 +520,6 @@ void hit_s1_data(hit_main *cv)
                         }
                         case(FOURCC_PLYR):
                         {
-                            
                             nk_layout_row_dynamic(cv->nk_ctx, row_height, 1);
                             nk_property_int(cv->nk_ctx, "#Max Health", 0, &block->plyr.max_health, 6, 1, 1);
                             nk_layout_row_dynamic(cv->nk_ctx, row_height, 1);
@@ -719,8 +723,10 @@ void hit_common_init(hit_main *cv)
 {
     //hit_load_save(cv);
     // TODO(jelly): actually set the save file data struct instead of doing this laziness
+    #ifndef DONT_USE_BAKED_IN_SAVE
     bfbb_save_file_read(&cv->save_file, save_data_100, sizeof(save_data_100));
     cv->save_file_is_loaded = 1;
+    #endif
     
     //TODO(Will): Make this all one function
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE

@@ -8,7 +8,11 @@
 #include "bfbb_gci_header.h"
 #include "bfbb_save.h"
 #include "saves/100save.h"
-#include "scenedata/all.h"
+#ifdef BFBBMIX
+#include "scenedata/bfbbmix.h"
+#else
+#include "scenedata/bfbb.h"
+#endif
 #include "scene_tabs.h"
 #include "hmac_sha1.c"
 
@@ -291,6 +295,12 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
         case BASE_TYPE_COND:
         {
             b.cond.base_enable = (u8)bit_eat(br, 1);
+            break;
+        }
+        case BASE_TYPE_UIFONT:
+        {
+            b.uifont.base_enable = (u8)bit_eat(br, 1);
+            b.uifont.show_ent = (u8)bit_eat(br, 1);
             break;
         }
         case BASE_TYPE_TELEPORTBOX:
@@ -582,6 +592,12 @@ void bfbb_save_file_write_scene_block(bit_writer *b, scene_table_entry* p, s32 n
         case BASE_TYPE_COND:
         {
             bit_push(b, bt.cond.base_enable, 1);
+            break;
+        }
+        case BASE_TYPE_UIFONT:
+        {
+            bit_push(b, bt.uifont.base_enable, 1);
+            bit_push(b, bt.uifont.show_ent, 1);
             break;
         }
         case BASE_TYPE_TELEPORTBOX:
