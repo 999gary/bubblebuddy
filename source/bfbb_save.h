@@ -225,19 +225,19 @@ struct base_type {
         base_type_taskbox     taskbox;
         base_type_taxi        taxi;
         base_type_camerafly   camfly;
+        
+        u8 padding[16 - sizeof(u32)*2]; // NOTE(jelly): pad to 16 bytes
     };
-    base_type *next;
 };
 
-// TODO(jelly): alloc base_types better
+// TODO(jelly): eventually this can be a linked list of array "buckets" or something
 typedef struct {
     u8 visited;
     f32 offsetx;
     f32 offsety;
-    base_type *base;
-    /*s32 count;
-    base_type *head;
-    base_type *tail;*/
+    u32 max_base_count;
+    u32 base_count;
+    base_type *bases;
 } bfbb_save_file_block_scene;
 
 typedef struct {
@@ -266,23 +266,19 @@ typedef struct {
 } bfbb_save_file_block;
 #pragma pack(pop)
 
-typedef struct {
-    s32 capacity;
-    s32 in_use;
-    base_type *stack;
-} base_type_stack;
-
 // NOTE(jelly): bfbb_save_file contains everything EXCEPT
 //                -the 0x5880-sized GCI header
 //                -the GDAT block (which goes at the start)
 //                -the gigantic SFIL block (which goes at the end)
 //                -any 0xBF padding
 //                -any zero-padding at the end (like in .gci)
+// TODO(jelly): actually decide whether the arena goes here or in hit_main 
 typedef struct {
+    memory_arena *memory;
+    char *path;
     int original_file_size;
     u32 original_crc32_checksum; // NOTE(jelly): these probably aren't needed
     int is_big_endian;
-    //base_type_stack base_stack;
     int block_count;
     bfbb_save_file_block blocks[64];
 } bfbb_save_file;

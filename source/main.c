@@ -18,8 +18,15 @@ TODO(jelly): STATE OF THE PROGRAM
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE
 #include "hiphop.c"
 #endif
-int is_digit(u8);
-int is_uppercase_letter(u8);
+
+int is_uppercase_letter(char c) {
+    return c >= 'A' && c <= 'Z';
+}
+
+int is_digit(char c) {
+    return c >= '0' && c <= '9';
+}
+
 #include "bfbb_save.c"
 
 static u32 window_width, window_height;
@@ -37,14 +44,6 @@ static u32 window_width, window_height;
 Util
 
 -------------------------------------------*/
-
-int is_uppercase_letter(u8 c) {
-    return c >= 'A' && c <= 'Z';
-}
-
-int is_digit(u8 c) {
-    return c >= '0' && c <= '9';
-}
 
 char nibble_to_hex_char(unsigned char nibble) {
     if (nibble < 10) return nibble + '0';
@@ -72,9 +71,9 @@ unsigned char *read_entire_file(char *path, int *size) {
         if (n > 0 && n < MAX_READ_FILE_SIZE) {
             result = malloc(n);
             fread(result, 1, n, in);
-            fclose(in);
             *size = n;
         }
+        fclose(in);
     }
     return result;
 }
@@ -94,34 +93,39 @@ void hit_try_load_save(hit_main *cv, char *path) {
         int size = 0;
         unsigned char *data = read_entire_file(path, &size);
         if (data) {
-            if (bfbb_save_file_read(&cv->save_file, data, size)) {
+            if (bfbb_save_file_read(cv->save_file, data, size)) {
                 cv->save_file_is_loaded = 1;
-                memset(cv->s1_fpath, 0, sizeof(cv->s1_fpath));
-                memcpy(cv->s1_fpath, path, strlen(path));
+                cv->save_file->path = path;
             } else {
                 hit_message_box_ok_fmt("Failed to Load Save File", 
                                        "'%s' doesn't appear to be a valid"
                                        " BFBB save file in a format that we support. Sorry. :(", path);
+                
+                cv->save_file_is_loaded = 0;
             }
             free(data);
         } else {
+            cv->save_file_is_loaded = 0;
             hit_message_box_ok_fmt("Failed to Load Save File", "'%s' looks too big to be BFBB save file. Sorry :(", path);
         }
     } else {
+        cv->save_file_is_loaded = 0;
         hit_message_box_ok_fmt("Failed to Load Save File", "Couldn't open file '%s'. Sorry :(", path);
     }
 }
 
 void hit_load_save(hit_main *cv)
 {
-    bfbb_save_file_free_blocks(&cv->save_file);
-    char buffer[4096] = {0};
-    if(!hit_file_select_read(buffer, sizeof(buffer)))
-    {
-        hit_try_load_save(cv, buffer);
+    memory_arena_reset(&cv->memory);
+    // TODO(jelly): this is stupid we shouldn't free and realloc the save file struct every time
+    cv->save_file = MemoryArenaAllocType(&cv->memory, bfbb_save_file);
+    char *path = hit_file_select_read(cv);
+    if (path) {
+        hit_try_load_save(cv, path);
+    } else {
+        // TODO(jelly): error message????
     }
 }
-
 /*-------------------------------------------
 
 Global Components
@@ -142,7 +146,7 @@ void hit_top_panel(hit_main *cv)
 #endif
         if(cv->save_file_is_loaded &&
            nk_menu_begin_symbol_text(cv->nk_ctx, "Save Edit Menu", 14, NK_TEXT_CENTERED, NK_SYMBOL_TRIANGLE_DOWN, 
-                                     nk_vec2(window_width/3.0f, (window_height/20.0f)*(cv->save_file.block_count))))
+                                     nk_vec2(window_width/3.0f, (window_height/20.0f)*(cv->save_file->block_count))))
         {
             nk_layout_row_dynamic(cv->nk_ctx, window_height/40.0f, 3);
             if(nk_menu_item_label(cv->nk_ctx, "General", NK_TEXT_CENTERED))
@@ -150,9 +154,9 @@ void hit_top_panel(hit_main *cv)
                 cv->s1_scene_id = 0;
             }
             int kj = 1;
-            for(int i = 0; i<cv->save_file.block_count; i++)
+            for(int i = 0; i<cv->save_file->block_count; i++)
             {
-                bfbb_save_file_block b = cv->save_file.blocks[i];
+                bfbb_save_file_block b = cv->save_file->blocks[i];
                 if(bfbb_save_file_fourcc_is_scene(b.header.id))
                 {
                     if(!(kj%3))
@@ -235,7 +239,7 @@ void hit_s1_scene_switch(hit_main *cv, bfbb_save_file_block* block, int j, float
     //float row_height = win_height/3/8;
     float row_height = win_height*(1.0f/24.0f);
     
-    base_type* b = &block->scene.base[j];
+    base_type* b = &block->scene.bases[j];
     nk_base_type_begin(cv->nk_ctx, row_height, b->id, b->type);
     switch(b->type)
     {
@@ -396,10 +400,10 @@ void hit_s1_scene_switch(hit_main *cv, bfbb_save_file_block* block, int j, float
 void hit_s1_scene_screen(hit_main* cv, scene_table_entry* table, char* id, float win_height)
 {
     int kj = 0;
-    bfbb_save_file_block *b = bfbb_save_file_find_block(&cv->save_file, id);
-    for(int i = 0; i<arrlen(b->scene.base); i++)
+    bfbb_save_file_block *b = bfbb_save_file_find_block(cv->save_file, id);
+    for(int i = 0; i<b->scene.base_count; i++)
     {
-        base_type *bt = &b->scene.base[i];
+        base_type *bt = &b->scene.bases[i];
         if(!(kj%3))
             nk_layout_row_dynamic(cv->nk_ctx, win_height*(1.0f/3.0f), 3);
         kj++;
@@ -444,11 +448,23 @@ void hit_s1_data(hit_main *cv)
     float win_height_offset = window_height/20.0f;
     float win_height = window_height - (window_height/20.0f*2.0f);
     
-    bfbb_save_file *save_file = &cv->save_file;
+    bfbb_save_file *save_file = cv->save_file;
     bfbb_save_file_block *blocks = save_file->blocks;
     int block_count = save_file->block_count;
     
     static int is_hex_string_initialized = 0;
+    
+    // NOTE(jelly): for testing base_count upper-bound
+#if 0
+    u32 max_count = 0;
+    for (int i = 0; i < block_count; i++) {
+        bfbb_save_file_block *block = &blocks[i];
+        if (bfbb_save_file_block_is_scene(block)) {
+            u32 count = block->scene.base_count;
+            max_count = Maximum(count, max_count);
+        }
+    }
+#endif
     
     if(nk_begin(cv->nk_ctx, "Data Panel", nk_rect(0, win_height_offset, window_width, win_height), NK_WINDOW_BORDER))
     {
@@ -650,17 +666,19 @@ void hit_s1_bottom_panel(hit_main *cv)
         {
             int save_as_gci = -1;
             int extension_supplied = 0;
-            char path_buffer[4096] = {0}; // NOTE(jelly): 4 kilos on the stack
             int save_success = 0;
-            if (!hit_file_select_write(path_buffer, sizeof(path_buffer), &save_as_gci, &extension_supplied)) {
+            char *path = hit_file_select_write(cv, &save_as_gci, &extension_supplied);
+            if (path) {
                 assert(save_as_gci == 0 || save_as_gci == 1);
                 if (!extension_supplied) {
                     char *exts[] = { ".xsv", ".gci" };
                     char *ext = exts[save_as_gci];
-                    // NOTE(jelly): i hate C
-                    strncat(path_buffer, ext, sizeof(path_buffer) - strlen(path_buffer) - 1);
+                    // TODO(jelly): this is pretty hacky pls fix
+                    assert(memory_arena_get_size_unused(&cv->memory) > 4);
+                    strcat(path, ext);
+                    memory_arena_alloc(&cv->memory, 5);
                 }
-                if (bfbb_save_file_write_out(&cv->save_file, path_buffer, save_as_gci)) {
+                if (bfbb_save_file_write_out(cv->save_file, path, save_as_gci)) {
                     save_success = 1;
                 }
             }
@@ -673,7 +691,9 @@ void hit_s1_bottom_panel(hit_main *cv)
             hit_load_save(cv);
         }
         cv->s1_adv = 1;
-        nk_label(cv->nk_ctx, cv->s1_fpath, NK_TEXT_CENTERED);
+        if (cv->save_file_is_loaded && cv->save_file->path) {
+            nk_label(cv->nk_ctx, cv->save_file->path, NK_TEXT_CENTERED);
+        }
     }
     nk_end(cv->nk_ctx);
 }
@@ -723,12 +743,18 @@ void hit_update_and_render(hit_main *cv)
 
 void hit_common_init(hit_main *cv)
 {
+    memory_arena memory = memory_arena_new(MEMORY_ARENA_BLOCK_DEFAULT_SIZE);
+    cv->save_file = MemoryArenaAllocType(&memory, bfbb_save_file);
+    cv->memory = memory;
+    cv->save_file->memory = &cv->memory;
+    
+    
     //hit_load_save(cv);
     // TODO(jelly): actually set the save file data struct instead of doing this laziness
-    #ifndef DONT_USE_BAKED_IN_SAVE
-    bfbb_save_file_read(&cv->save_file, save_data_100, sizeof(save_data_100));
+#ifndef DONT_USE_BAKED_IN_SAVE
+    bfbb_save_file_read(cv->save_file, save_data_100, sizeof(save_data_100));
     cv->save_file_is_loaded = 1;
-    #endif
+#endif
     
     //TODO(Will): Make this all one function
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE

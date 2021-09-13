@@ -1,9 +1,10 @@
 
 // NOTE(jelly): all code below assumes a little-endian architecture for now.
 
-
+/*
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+*/
 
 #include "bfbb_gci_header.h"
 #include "bfbb_save.h"
@@ -173,17 +174,6 @@ void bfbb_save_file_byteswap(u8 *data, int size, int in) {
     }
 }
 
-void bfbb_save_file_free_blocks(bfbb_save_file *save_file) {
-    int block_count = save_file->block_count;
-    for (int i = 0; i < block_count; i++) {
-        bfbb_save_file_block *block = &save_file->blocks[i];
-        if (bfbb_save_file_block_is_scene(block)) {
-            arrfree(block->scene.base);
-        }
-    }
-    save_file->block_count = 0;
-}
-
 bfbb_save_file_block_header bfbb_save_file_block_header_parse(buffer *b, int is_gci) {
     bfbb_save_file_block_header result = {0};
     if (peek_bytes(b, sizeof(bfbb_save_file_block_header))) {
@@ -346,12 +336,17 @@ int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_sa
     //              reading from block->scene while writing to it will probably break
     bfbb_save_file_block_scene scene = {0};
     
+    // TODO(jelly): linked lists of these arrays
+    u32 max_base_count = Maximum(table_count, 512);
+    scene.bases = MemoryArenaAllocTypeCount(save_file->memory, base_type, max_base_count);
+    
     scene.visited = bit_eat(br, 1);
     scene.offsetx = bit_eat_float(br);
     scene.offsety = bit_eat_float(br);
     for (int i = 0; i < table_count; i++) {
-        arrput(scene.base, bfbb_save_file_read_scene_block_base_type(save_file, i, br, &table[i]));
+        scene.bases[i] = bfbb_save_file_read_scene_block_base_type(save_file, i, br, &table[i]);
     }
+    scene.base_count = table_count;
     block->scene = scene;
     return 1; // TODO(jelly): more checks??
 }
@@ -419,7 +414,7 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                 break;
             }
             //TODO(Will): Implement these :)
-            #ifdef BFBBMIX
+#ifdef BFBBMIX
             case(FOURCC_EX01):
             case(FOURCC_EX02):
             case(FOURCC_EX03):
@@ -431,7 +426,7 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
             case(FOURCC_EX09):
             case(FOURCC_PG02):
             case(FOURCC_PG13):
-            #endif
+#endif
             case(FOURCC_LEDR):
             case(FOURCC_ROOM):
             case(FOURCC_PREF):
@@ -536,7 +531,7 @@ void bfbb_save_file_append_padding(write_buffer *b, int padding_size) {
 
 void bfbb_save_file_write_scene_block(bit_writer *b, scene_table_entry* p, s32 n, bfbb_save_file_block *block)
 {
-    base_type bt = block->scene.base[n];
+    base_type bt = block->scene.bases[n];
     switch(p->type)
     {
         case BASE_TYPE_TRIGGER:
@@ -659,7 +654,7 @@ void bfbb_save_file_write_scene_block_stuff(bit_writer *bw, bfbb_save_file_block
 
 void bfbb_save_file_write_scene(write_buffer *b, bit_writer *bw, bfbb_save_file_block *block, scene_table_entry *table, s32 table_count) {
     bfbb_save_file_write_scene_block_stuff(bw, block); // TODO(jelly): name this better for godsake
-    for (int i =0; i < arrlen(block->scene.base); i++) {
+    for (int i =0; i < block->scene.base_count; i++) {
         if (i < table_count) bfbb_save_file_write_scene_block(bw, &table[i], i, block);
         else {
             // TODO(jelly): diagnostic?
@@ -730,7 +725,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                 b->size+=size_to_write;
                 break;
             }
-            #ifdef BFBBMIX
+#ifdef BFBBMIX
             case(FOURCC_EX01):
             case(FOURCC_EX02):
             case(FOURCC_EX03):
@@ -742,7 +737,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
             case(FOURCC_EX09):
             case(FOURCC_PG02):
             case(FOURCC_PG13): write_bytes(b, block->raw_bytes, size_to_write); break;
-            #endif
+#endif
             default: {
                 if (bfbb_save_file_fourcc_looks_like_scene(block->header.id)) {
                     const scene_table_meta *m = get_scene_table_meta(block->header.id);

@@ -15,6 +15,7 @@
 #define Maximum(a, b) ((a) > (b) ? (a) : (b))
 #define Clamp(v, a, b) ((v) < (a) ? (a) : (v) > (b) ? (b) : (v))
 
+#include "memory_arena.h"
 #include "bfbb_save.h"
 
 #ifdef _WIN32
@@ -30,12 +31,12 @@
 typedef struct nk_context nk_context;
 typedef struct {
     nk_context *nk_ctx;
+    memory_arena memory;
     int running;
     int screen;
     int s1_adv;
     int s1_scene_id;
-    char s1_fpath[4096];
-    bfbb_save_file save_file;
+    bfbb_save_file *save_file;
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE
     hh* hiphop;
 #endif

@@ -110,9 +110,11 @@ WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {
             HDROP h = (HDROP) wparam;
             
             UINT index = 0;// NOTE(jelly): let's only accept the first dropped file.
-            char path_buffer[4096] = {0};
-            if (DragQueryFileA(h, index, path_buffer, sizeof(path_buffer))) {
-                hit_try_load_save(cv, path_buffer);
+            memory_arena_ensure_minimum_size(&cv->memory, 4096);
+            char *path = memory_arena_alloc(&cv->memory, 1);
+            if (DragQueryFileA(h, index, path, memory_arena_get_size_unused(&cv->memory))) {
+                memory_arena_alloc(&cv->memory, strlen(path));
+                hit_try_load_save(cv, path);
             }
         } break;
         
@@ -188,19 +190,6 @@ static void create_d3d9_device(HWND wnd)
     }
 }
 
-// NOTE(jelly): the two functions below return zero on success because C# is really cool
-int hit_file_select_read(char* path, int max_path_len)
-{
-    OPENFILENAME file = {0};
-    file.hwndOwner = window_handle;
-    file.lpstrFile = path;
-    file.nFilterIndex = 1;
-    file.nMaxFile = max_path_len;
-    file.lStructSize = sizeof file;
-    file.lpstrFilter = "All Files\0*.*\0\0";
-    return !GetOpenFileName(&file);
-}
-
 char *get_extension(char *s) {
     char *c = s + strlen(s) - 1;
     while (c > s && *c != '.') c--;
@@ -208,19 +197,42 @@ char *get_extension(char *s) {
     return c;
 }
 
-int hit_file_select_write(char* path, int max_path_len, int *save_as_gci, int *extension_supplied)
+// NOTE(jelly): the two functions below return NULL on failure
+char *hit_file_select_read(hit_main *cv)
 {
+    // TODO(jelly): MAX PATH LENGTH ON WIN32??
+    memory_arena_ensure_minimum_size(&cv->memory, 4096);
+    
     OPENFILENAME file = {0};
     file.hwndOwner = window_handle;
-    file.lpstrFile = path;
-    file.nMaxFile = max_path_len;
+    file.lpstrFile = (char *)memory_arena_alloc(&cv->memory, 1);
+    file.lpstrFile[0] = 0;
+    file.nFilterIndex = 1;
+    file.nMaxFile = memory_arena_get_size_unused(&cv->memory);
+    file.lStructSize = sizeof file;
+    file.lpstrFilter = "All Files\0*.*\0\0";
+    BOOL rc = GetOpenFileName(&file);
+    if (rc == 0) return 0;
+    memory_arena_alloc(&cv->memory, strlen(file.lpstrFile));
+    return file.lpstrFile;
+}
+
+char *hit_file_select_write(hit_main *cv, int *save_as_gci, int *extension_supplied)
+{
+    memory_arena_ensure_minimum_size(&cv->memory, 4096);
+    
+    OPENFILENAME file = {0};
+    file.hwndOwner = window_handle;
+    file.lpstrFile = (char *)memory_arena_alloc(&cv->memory, 1);
+    file.lpstrFile[0] = 0;
+    file.nMaxFile = memory_arena_get_size_unused(&cv->memory);
     file.lStructSize = sizeof file;
     file.lpstrFilter = "Xbox Save File\0.xsv\0Gamecube Save File\0.gci\0\0";
     if (GetSaveFileName(&file)) {
         *save_as_gci = (file.nFilterIndex - 1) != 0; // NOTE(jelly): clamping to 1 or 0
         if (file.nFileExtension != 0) {
             *extension_supplied = 1;
-            char *ext = get_extension(path);
+            char *ext = get_extension(file.lpstrFile);
             if (ext) {
                 if (!strcmp(ext, ".xsv")) *save_as_gci = 0;
                 if (!strcmp(ext, ".gci")) *save_as_gci = 1;
@@ -229,9 +241,11 @@ int hit_file_select_write(char* path, int max_path_len, int *save_as_gci, int *e
             *extension_supplied = 0;
         }
         
-        return 0;
+        memory_arena_alloc(&cv->memory, strlen(file.lpstrFile));
+        
+        return file.lpstrFile;
     }
-    return 1;
+    return 0;
 }
 
 void hit_message_box_ok(char *caption, char *message) {
