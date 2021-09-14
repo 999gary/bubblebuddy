@@ -10,6 +10,11 @@
 #define LEVEL_COUNT 15
 #define HEX_EDITORS_SUCK_DONT_USE_THEM
 //#define BFBBMIX
-//#define DONT_USE_BAKED_IN_SAVE
-#define APP_VERSION "0.2rc3"
+#ifdef BFBBMIX
+#define DONT_USE_BAKED_IN_SAVE
+#define APP_GAME_NAME "BFBBMix"
+#else
+#define APP_GAME_NAME "BFBB"
+#endif
+#define APP_VERSION "09142021"
 #define CURRENT_THEME THEME_DARK

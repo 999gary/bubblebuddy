@@ -2,6 +2,9 @@ build/*
 .vs/*
 .vscode/*
 himt
+*.HIP
+*.HOP
+*.10x_workspace
 *.gci
 *.bak
 *.xsv
