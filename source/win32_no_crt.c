@@ -290,3 +290,7 @@ void exit(int code) { ExitProcess(code); }
 int mainCRTStartup(void) {
     ExitProcess(main());
 }
+
+int WinMainCRTStartup(void) {
+    ExitProcess(main());
+}
