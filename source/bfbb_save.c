@@ -323,7 +323,7 @@ base_type bfbb_save_file_read_scene_block_base_type(bfbb_save_file *save_file, s
         }
         default:
         {
-            printf("Unknown base type %d\n", p->type);
+            //printf("Unknown base type %d\n", p->type);
             assert(0);
         }
     }
@@ -338,7 +338,7 @@ int bfbb_save_file_read_scene(bfbb_save_file *save_file, bit_reader *br, bfbb_sa
     
     // TODO(jelly): linked lists of these arrays
     u32 max_base_count = Maximum(table_count, 512);
-    scene.bases = MemoryArenaAllocTypeCount(save_file->memory, base_type, max_base_count);
+    scene.bases = MemoryArenaAllocTypeCount(&save_file->memory, base_type, max_base_count);
     
     scene.visited = bit_eat(br, 1);
     scene.offsetx = bit_eat_float(br);
@@ -439,7 +439,7 @@ int bfbb_save_file_read_bit_blocks(bfbb_save_file *save_file)
                     bfbb_save_file_read_scene(save_file, &br, block, m->table, m->count);
                 } else {
                     char* chars = block->header.id_chars;
-                    printf("Unknown block: %c%c%c%c", chars[3], chars[2], chars[1], chars[0]);
+                    //printf("Unknown block: %c%c%c%c", chars[3], chars[2], chars[1], chars[0]);
                     assert(0);
                 }
             }
@@ -639,7 +639,7 @@ void bfbb_save_file_write_scene_block(bit_writer *b, scene_table_entry* p, s32 n
         }
         default:
         {
-            printf("Unknown base type %d", p->type);
+            //printf("Unknown base type %d", p->type);
             assert(0);
         }
     }
@@ -745,7 +745,7 @@ bfbb_save_file_block *bfbb_save_file_append_block(write_buffer *b, bfbb_save_fil
                         bfbb_save_file_write_scene(b, &bw, block, m->table, m->count);
                     } else {
                         char* chars = block->header.id_chars;
-                        printf("Unknown block: %c%c%c%c", chars[3], chars[2], chars[1], chars[0]);
+                        //printf("Unknown block: %c%c%c%c", chars[3], chars[2], chars[1], chars[0]);
                         assert(0);
                     }
                 } else {
@@ -831,15 +831,7 @@ int bfbb_save_file_write_out(bfbb_save_file *save_file, const char *path, int is
         write_bytes(&b, xbox_sig.hash, 20);
     }
     
-    {
-        FILE *out = fopen(path, "wb");
-        if (out) {
-            bytes_written_out = fwrite(b.bytes, 1, b.size, out);
-            fclose(out);
-        } else return 0;
-    }
-    
-    return bytes_written_out == b.size;
+    return write_out_file(path, b.bytes, b.size);
 }
 
 // NOTE(jelly): maybe there can be more checks but who cares really

@@ -110,11 +110,11 @@ WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {
             HDROP h = (HDROP) wparam;
             
             UINT index = 0;// NOTE(jelly): let's only accept the first dropped file.
-            memory_arena_ensure_minimum_size(&cv->memory, 4096);
-            char *path = memory_arena_alloc(&cv->memory, 1);
-            if (DragQueryFileA(h, index, path, memory_arena_get_size_unused(&cv->memory))) {
-                memory_arena_alloc(&cv->memory, strlen(path));
+            memory_arena_ensure_minimum_size(&cv->save_file->memory, 4096);
+            char *path = memory_arena_alloc(&cv->save_file->memory, 1);
+            if (DragQueryFileA(h, index, path, memory_arena_get_size_unused(&cv->save_file->memory))) {
                 hit_try_load_save(cv, path);
+                memory_arena_alloc(&cv->save_file->memory, strlen(path));
             }
         } break;
         
@@ -201,31 +201,31 @@ char *get_extension(char *s) {
 char *hit_file_select_read(hit_main *cv)
 {
     // TODO(jelly): MAX PATH LENGTH ON WIN32??
-    memory_arena_ensure_minimum_size(&cv->memory, 4096);
+    memory_arena_ensure_minimum_size(&cv->save_file->memory, 4096);
     
     OPENFILENAME file = {0};
     file.hwndOwner = window_handle;
-    file.lpstrFile = (char *)memory_arena_alloc(&cv->memory, 1);
+    file.lpstrFile = (char *)memory_arena_alloc(&cv->save_file->memory, 1);
     file.lpstrFile[0] = 0;
     file.nFilterIndex = 1;
-    file.nMaxFile = memory_arena_get_size_unused(&cv->memory);
+    file.nMaxFile = memory_arena_get_size_unused(&cv->save_file->memory);
     file.lStructSize = sizeof file;
     file.lpstrFilter = "All Files\0*.*\0\0";
     BOOL rc = GetOpenFileName(&file);
     if (rc == 0) return 0;
-    memory_arena_alloc(&cv->memory, strlen(file.lpstrFile));
+    memory_arena_alloc(&cv->save_file->memory, strlen(file.lpstrFile));
     return file.lpstrFile;
 }
 
 char *hit_file_select_write(hit_main *cv, int *save_as_gci, int *extension_supplied)
 {
-    memory_arena_ensure_minimum_size(&cv->memory, 4096);
+    memory_arena_ensure_minimum_size(&cv->save_file->memory, 4096);
     
     OPENFILENAME file = {0};
     file.hwndOwner = window_handle;
-    file.lpstrFile = (char *)memory_arena_alloc(&cv->memory, 1);
+    file.lpstrFile = (char *)memory_arena_alloc(&cv->save_file->memory, 1);
     file.lpstrFile[0] = 0;
-    file.nMaxFile = memory_arena_get_size_unused(&cv->memory);
+    file.nMaxFile = memory_arena_get_size_unused(&cv->save_file->memory);
     file.lStructSize = sizeof file;
     file.lpstrFilter = "Xbox Save File\0.xsv\0Gamecube Save File\0.gci\0\0";
     if (GetSaveFileName(&file)) {
@@ -241,7 +241,7 @@ char *hit_file_select_write(hit_main *cv, int *save_as_gci, int *extension_suppl
             *extension_supplied = 0;
         }
         
-        memory_arena_alloc(&cv->memory, strlen(file.lpstrFile));
+        memory_arena_alloc(&cv->save_file->memory, strlen(file.lpstrFile));
         
         return file.lpstrFile;
     }

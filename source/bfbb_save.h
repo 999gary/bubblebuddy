@@ -272,9 +272,8 @@ typedef struct {
 //                -the gigantic SFIL block (which goes at the end)
 //                -any 0xBF padding
 //                -any zero-padding at the end (like in .gci)
-// TODO(jelly): actually decide whether the arena goes here or in hit_main 
 typedef struct {
-    memory_arena *memory;
+    memory_arena memory;
     char *path;
     int original_file_size;
     u32 original_crc32_checksum; // NOTE(jelly): these probably aren't needed

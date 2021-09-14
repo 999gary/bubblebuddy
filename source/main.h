@@ -1,11 +1,26 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include "types.h"
+
+#ifdef WIN32_NO_CRT
+#define assert(exp) do { if (!(exp)) { __debugbreak(); } } while(0)
+void *virtual_alloc(u32);
+void virtual_free(void*);
+u32 win32_time(void *);
+#define time win32_time
+#else
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define virtual_alloc malloc
+#define virtual_free  free
+#endif
 
-#include "types.h"
+#define STB_SPRINTF_IMPLEMENTATION
+#include "stb_sprintf.h"
+
 #include "config.h"
 #include "byteswap.h"
 #include "bit_methods.h"

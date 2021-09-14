@@ -45,6 +45,39 @@ Util
 
 -------------------------------------------*/
 
+#ifdef WIN32_NO_CRT
+#include "win32_no_crt.c"
+#else
+unsigned char *read_entire_file(memory_arena *memory, char *path, int *size) {
+    const int MAX_READ_FILE_SIZE = 128*1024; // NOTE(jelly): i think this is a good upper bound
+    int n; 
+    unsigned char *result = 0;
+    FILE *in = fopen(path, "rb");
+    assert(size);
+    if (in) {
+        fseek(in, 0, SEEK_END);
+        n = ftell(in);
+        rewind(in);
+        if (n > 0 && n < MAX_READ_FILE_SIZE) {
+            result = memory_arena_alloc(memory, n);
+            fread(result, 1, n, in);
+            *size = n;
+        }
+        fclose(in);
+    }
+    return result;
+}
+int write_out_file(char *path, unsigned char *data, int len) {
+    FILE *out = fopen(path, "wb");
+    if (out) {
+        int bytes_written_out = fwrite(data, 1, len, out);
+        fclose(out);
+        return bytes_written_out == len;
+    }
+    return 0;
+}
+#endif
+
 char nibble_to_hex_char(unsigned char nibble) {
     if (nibble < 10) return nibble + '0';
     else if (nibble < 16) return nibble + 'A' - 10;
@@ -58,67 +91,40 @@ unsigned char hex_char_to_nibble(char hex_char) {
     return 0;
 }
 
-unsigned char *read_entire_file(char *path, int *size) {
-    const int MAX_READ_FILE_SIZE = 128*1024; // NOTE(jelly): i think this is a good upper bound
-    int n; 
-    unsigned char *result = 0;
-    FILE *in = fopen(path, "rb");
-    assert(size);
-    if (in) {
-        fseek(in, 0, SEEK_END);
-        n = ftell(in);
-        rewind(in);
-        if (n > 0 && n < MAX_READ_FILE_SIZE) {
-            result = malloc(n);
-            fread(result, 1, n, in);
-            *size = n;
-        }
-        fclose(in);
-    }
-    return result;
-}
-
 void hit_message_box_ok_fmt(char *caption, char *message_fmt, ...) {
     va_list args;
     static char buffer[4096]; 
     va_start(args, message_fmt);
-    vsnprintf(buffer, sizeof(buffer), message_fmt, args);
+    stbsp_vsnprintf(buffer, sizeof(buffer), message_fmt, args);
     va_end(args);
     hit_message_box_ok(caption, buffer);
 }
 
 void hit_try_load_save(hit_main *cv, char *path) {
-    FILE *in = fopen(path, "rb");
-    if (in) {
-        int size = 0;
-        unsigned char *data = read_entire_file(path, &size);
-        if (data) {
-            if (bfbb_save_file_read(cv->save_file, data, size)) {
-                cv->save_file_is_loaded = 1;
-                cv->save_file->path = path;
-            } else {
-                hit_message_box_ok_fmt("Failed to Load Save File", 
-                                       "'%s' doesn't appear to be a valid"
-                                       " BFBB save file in a format that we support. Sorry. :(", path);
-                
-                cv->save_file_is_loaded = 0;
-            }
-            free(data);
+    memory_arena_state state = memory_arena_begin_scratch_memory(&cv->memory);
+    int size = 0;
+    unsigned char *data = read_entire_file(&cv->memory, path, &size);
+    if (data) {
+        memory_arena_reset(&cv->save_file->memory);
+        if (bfbb_save_file_read(cv->save_file, data, size)) {
+            cv->save_file_is_loaded = 1;
+            cv->save_file->path = path;
         } else {
+            hit_message_box_ok_fmt("Failed to Load Save File", 
+                                   "'%s' doesn't appear to be a valid"
+                                   " BFBB save file in a format that we support. Sorry. :(", path);
+            
             cv->save_file_is_loaded = 0;
-            hit_message_box_ok_fmt("Failed to Load Save File", "'%s' looks too big to be BFBB save file. Sorry :(", path);
         }
     } else {
         cv->save_file_is_loaded = 0;
-        hit_message_box_ok_fmt("Failed to Load Save File", "Couldn't open file '%s'. Sorry :(", path);
+        hit_message_box_ok_fmt("Failed to Load Save File", "'%s' is either too big to be BFBB save file or couldn't be opened. Sorry :(", path);
     }
+    memory_arena_end_scratch_memory(&cv->memory, state);
 }
 
 void hit_load_save(hit_main *cv)
 {
-    memory_arena_reset(&cv->memory);
-    // TODO(jelly): this is stupid we shouldn't free and realloc the save file struct every time
-    cv->save_file = MemoryArenaAllocType(&cv->memory, bfbb_save_file);
     char *path = hit_file_select_read(cv);
     if (path) {
         hit_try_load_save(cv, path);
@@ -204,12 +210,23 @@ Screen 1 Components
 
 -------------------------------------------*/
 
-void nk_menu_begin_labelf(struct nk_context *ctx, nk_flags align, struct nk_vec2 size, const char *fmt, ...) {
-    static char buffer[2048];
+void nk_labelf(struct nk_context *ctx, nk_flags align, const char *fmt, ...) {
+    static char buffer[4096];
     
     va_list args;
     va_start(args, fmt);
-    int result = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    int result = stbsp_vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    
+    nk_label(ctx, buffer, align);
+}
+
+void nk_menu_begin_labelf(struct nk_context *ctx, nk_flags align, struct nk_vec2 size, const char *fmt, ...) {
+    static char buffer[4096];
+    
+    va_list args;
+    va_start(args, fmt);
+    int result = stbsp_vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
     
     nk_menu_begin_label(ctx, buffer, align, size);
@@ -264,7 +281,7 @@ void hit_s1_scene_switch(hit_main *cv, bfbb_save_file_block* block, int j, float
             char buffer[256];
             for(int i = 0; i<ArrayCount(flag); i++)
             {
-                snprintf(buffer, sizeof(buffer), "Flag #%d", i+1);
+                stbsp_snprintf(buffer, sizeof(buffer), "Flag #%d", i+1);
                 nk_checkbox_label_u8(cv->nk_ctx, buffer, &flag[i]);
                 memset(buffer, 0, sizeof(buffer));
             }
@@ -391,7 +408,7 @@ void hit_s1_scene_switch(hit_main *cv, bfbb_save_file_block* block, int j, float
         }
         default:
         {
-            printf("Unknown base type %d\n", b->type);
+            //printf("Unknown base type %d\n", b->type);
             assert(0);
         }
     }
@@ -564,7 +581,7 @@ void hit_s1_data(hit_main *cv)
                             for(int k = 0; k<14; k++)
                             {
                                 memset(buffer, 0, sizeof(buffer));
-                                snprintf(buffer, sizeof(buffer), "Cutscene %d", k+1);
+                                stbsp_snprintf(buffer, sizeof(buffer), "Cutscene %d", k+1);
                                 nk_checkbox_label_u8(cv->nk_ctx, buffer, &block->plyr.cutscene_played[k]);
                             }
                             break;
@@ -635,7 +652,7 @@ void hit_s1_data(hit_main *cv)
                                 memset(buffer, 0, sizeof(buffer));
                                 flags[k] = state & 1;
                                 state >>= 1;
-                                snprintf(buffer, sizeof(buffer), "Cheat #%d", k+1);
+                                stbsp_snprintf(buffer, sizeof(buffer), "Cheat #%d", k+1);
                                 nk_checkbox_label_u8(cv->nk_ctx, buffer, &flags[k]);
                             }
                             state = 0;
@@ -674,9 +691,9 @@ void hit_s1_bottom_panel(hit_main *cv)
                     char *exts[] = { ".xsv", ".gci" };
                     char *ext = exts[save_as_gci];
                     // TODO(jelly): this is pretty hacky pls fix
-                    assert(memory_arena_get_size_unused(&cv->memory) > 4);
+                    assert(memory_arena_get_size_unused(&cv->save_file->memory) > 4);
                     strcat(path, ext);
-                    memory_arena_alloc(&cv->memory, 5);
+                    memory_arena_alloc(&cv->save_file->memory, 5);
                 }
                 if (bfbb_save_file_write_out(cv->save_file, path, save_as_gci)) {
                     save_success = 1;
@@ -740,14 +757,9 @@ void hit_update_and_render(hit_main *cv)
     set_style(cv->nk_ctx, CURRENT_THEME);
 }
 
-
 void hit_common_init(hit_main *cv)
 {
-    memory_arena memory = memory_arena_new(MEMORY_ARENA_BLOCK_DEFAULT_SIZE);
-    cv->save_file = MemoryArenaAllocType(&memory, bfbb_save_file);
-    cv->memory = memory;
-    cv->save_file->memory = &cv->memory;
-    
+    cv->save_file = MemoryArenaAllocType(&cv->memory, bfbb_save_file);
     
     //hit_load_save(cv);
     // TODO(jelly): actually set the save file data struct instead of doing this laziness
