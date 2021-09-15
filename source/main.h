@@ -19,7 +19,7 @@ u32 win32_time(void *);
 #endif
 
 #define STB_SPRINTF_IMPLEMENTATION
-#include "stb_sprintf.h"
+#include "external/stb_sprintf.h"
 
 #include "config.h"
 #include "byteswap.h"
@@ -50,6 +50,7 @@ typedef struct {
     int running;
     int screen;
     int s1_adv;
+	int s1_tab_count;
     int s1_scene_id;
     bfbb_save_file *save_file;
 #ifndef HIPHOP_SUCKS_AND_DOESNT_WORK_SAD_FACE

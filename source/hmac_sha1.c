@@ -4,8 +4,8 @@
 #include <string.h>
 #include <assert.h>
 
-#include "sha1.h"
-#include "sha1.c"
+#include "external/sha1.h"
+#include "external/sha1.c"
 
 typedef struct {
     union {

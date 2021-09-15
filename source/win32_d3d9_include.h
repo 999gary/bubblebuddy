@@ -19,7 +19,7 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
 #define NK_D3D9_IMPLEMENTATION
-#include "nuklear.h"
+#include "external/nuklear.h"
 #include "style.c"
 #include <d3d9.h>
 
@@ -66,4 +66,4 @@ void nk_free_wrapper2(nk_handle h, void *old) {
 
 #endif
 
-#include "nuklear_d3d9.h"
+#include "external/nuklear_d3d9.h"

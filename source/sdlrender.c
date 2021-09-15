@@ -1,11 +1,20 @@
 
-#include "opensans_font.h"
+#include "external/opensans_font.h"
 
 typedef struct
 {
     hit_main *cv;
     SDL_Window *win;
+    SDL_GLContext glContext;
 } args;
+
+int hit_quit(args* argss)
+{
+    nk_sdl_shutdown();
+    SDL_GL_DeleteContext(argss->glContext);
+    SDL_DestroyWindow(argss->win);
+    SDL_Quit();
+}
 
 int hit_loop(void* argss)
 {
@@ -15,6 +24,11 @@ int hit_loop(void* argss)
         SDL_Event evt;
         nk_input_begin(cv->nk_ctx);
         while (SDL_PollEvent(&evt)) {
+            if (evt.type == SDL_QUIT)
+            {
+                hit_quit(arg);
+                return 1;
+            }
             nk_sdl_handle_event(&evt);
         }
         nk_input_end(cv->nk_ctx);
@@ -26,8 +40,35 @@ int hit_loop(void* argss)
         nk_sdl_render_macro(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
         SDL_GL_SwapWindow(win);
 }
+char const * lFilterPatterns[2] = { "*.xsv", "*.gci" };
+char* hit_file_select_read(hit_main *cv)
+{
+    
+    return tinyfd_openFileDialog(
+        "Select file", 
+        "~", 
+        2, 
+        lFilterPatterns, 
+        NULL,
+        1 
+        );
+}
 
+void hit_message_box_ok(char* title,char* message)
+{
 
+}
+
+char* hit_file_select_write(hit_main *cv, int *save_as_gci, int *extension_supplied)
+{
+    return tinyfd_saveFileDialog(
+        "Save File",
+        "~",
+        2,
+        lFilterPatterns,
+        NULL
+        );
+}
 
 int main()
 {
@@ -62,19 +103,18 @@ int main()
     nk_sdl_font_stash_end();
     nk_style_set_font(cv.nk_ctx, &droid->handle);
     hit_common_init(&cv);
-    args arg = {&cv, win};
+    args arg = {&cv, win, &glContext};
     #ifdef EMSCRIPTEN
     emscripten_set_main_loop_arg(hit_loop, (void*)&arg, 0, nk_true);
     #else
     while (cv.running)
     {
-        hit_loop((void*)&arg);
+        if(hit_loop((void*)&arg))
+        {
+            cv.running = 0;
+            return 0;
+        }
     }
     #endif
-    cleanup:
-    nk_sdl_shutdown();
-    SDL_GL_DeleteContext(glContext);
-    SDL_DestroyWindow(win);
-    SDL_Quit();
     return 0;
 }

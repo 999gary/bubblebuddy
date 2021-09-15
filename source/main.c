@@ -463,6 +463,7 @@ void hit_s1_data(hit_main *cv)
     if(!cv->save_file_is_loaded)
         return;
     float win_height_offset = window_height/20.0f;
+	float tab_size = win_height_offset / 1.5;
     float win_height = window_height - (window_height/20.0f*2.0f);
     
     bfbb_save_file *save_file = cv->save_file;
@@ -485,7 +486,22 @@ void hit_s1_data(hit_main *cv)
     
     if(nk_begin(cv->nk_ctx, "Data Panel", nk_rect(0, win_height_offset, window_width, win_height), NK_WINDOW_BORDER))
     {
-        
+		s32 tab_count = 2;
+		nk_menubar_begin(cv->nk_ctx);
+		nk_layout_row_dynamic(cv->nk_ctx, tab_size, tab_count);
+		for (s32 i = 0; i < tab_count; i++)
+		{
+            struct nk_style_button button_style = {
+                {NK_STYLE_ITEM_COLOR, {nk_rgba(185, 185, 185, 255)}},
+                {NK_STYLE_ITEM_COLOR, {nk_rgba(185, 185, 185, 255)}},
+
+            };
+			if (nk_button_label_styled(cv->nk_ctx, &button_style, "tab")) {
+				
+			}
+		}
+		nk_menubar_end(cv->nk_ctx);
+
         if (bfbb_save_file_fourcc_looks_like_scene(cv->s1_scene_id)) {
             const scene_table_meta *m = get_scene_table_meta(cv->s1_scene_id);
             if (m) {

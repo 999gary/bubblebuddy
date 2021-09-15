@@ -1,5 +1,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include "external/tinyfiledialogs.h"
+#include "external/tinyfiledialogs.c"
 
 #define nk_sdl_render_macro(i, b, c) nk_sdl_render(i);
 
@@ -15,6 +17,6 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
 #define NK_SDL_GL2_IMPLEMENTATION
-#include "nuklear.h"
+#include "external/nuklear.h"
 #include "style.c"
-#include "nuklear_sdl_gl2.h"
+#include "external/nuklear_sdl_gl2.h"

@@ -23,9 +23,9 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
 #define NK_SDL_GLES2_IMPLEMENTATION
-#include "nuklear.h"
+#include "external/nuklear.h"
 #include "style.c"
-#include "nuklear_sdl_gles2.h"
+#include "external/nuklear_sdl_gles2.h"
 
 
 int hit_file_select_write(char* path, int max_path_len, int *save_as_gci, int *extension_supplied)
